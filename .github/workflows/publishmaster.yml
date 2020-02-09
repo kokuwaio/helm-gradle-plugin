@@ -17,7 +17,9 @@ jobs:
     - name: Add publish secret
       env:
         GRADLE_PROPS: ${{ secrets.GRADLE_PLUGIN_PORTAL_KEY_PROPERTIES }}
-      run: echo $GRADLE_PROPS > $HOME/.gradle/gradle.properties
+      run: | 
+        mkdir $HOME/.gradle
+        echo $GRADLE_PROPS > $HOME/.gradle/gradle.properties
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build with Gradle
