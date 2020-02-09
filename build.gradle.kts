@@ -24,8 +24,8 @@ gradlePlugin {
     }
 }
 pluginBundle {
-    website = ""
-    vcsUrl = ""
+    website = "https://github.com/kiwigrid/helm-gradle-plugin"
+    vcsUrl = "https://github.com/kiwigrid/helm-gradle-plugin"
     description = """
                 Gradle Plugin to integrate HELM Chart development in a gradle project with
                  strong focus on build and test.

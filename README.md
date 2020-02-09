@@ -3,6 +3,8 @@ Helm Plugin for Gradle
 
 This is a simple plugin for interacting with [Helm](https://helm.sh/) in gradle builds.
 
+![Java CI](https://github.com/kiwigrid/helm-gradle-plugin/workflows/Java%20CI/badge.svg)
+
 Why?
 ---
 When the plugin has been created, there hasn't been an alternative. These days there are numerous alternatives:
