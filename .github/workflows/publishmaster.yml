@@ -14,13 +14,10 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 1.8
-    - name: Add publish secret
-      env:
-        GRADLE_PROPS: ${{ secrets.GRADLE_PLUGIN_PORTAL_KEY_PROPERTIES }}
-      run: | 
-        mkdir $HOME/.gradle
-        echo $GRADLE_PROPS > $HOME/.gradle/gradle.properties
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build with Gradle
-      run: ./gradlew publishPlugins
+      env:
+        GRADLE_KEY: ${{ secrets.GRADLE_PLUGIN_PORTAL_KEY }}
+        GRADLE_SECRET:  ${{ secrets.GRADLE_PLUGIN_PORTAL_SECRET }}
+      run: ./gradlew publishPlugins -Pgradle.publish.key=$GRADLE_KEY -Pgradle.publish.secret=$GRADLE_SECRET
