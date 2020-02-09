@@ -34,7 +34,7 @@ Use one of the above if they suit your use case. This plugin is different a litt
   [chartmuseum](https://chartmuseum.com/) and 
   [artifactory](https://jfrog.com/artifactory/) should 
   work, I recommend to **use different ways of helm chart
-  publishing** as there's no official spec on how to do it.
+  publishing** as there's no official spec on how to do it (Helm 3 has experimental support for publishing to OCI registries).
   For example use the [artifactory gradle plugin](https://www.jfrog.com/confluence/display/RTF/Gradle+Artifactory+Plugin)
   if you're using artifactory.
 * **the only plugin** which has a real **notion of chart tests** including some
@@ -50,11 +50,11 @@ What?
   * `HelmInitTask`: client only helm init, usually done only once
   * `HelmBuildTask`: render the expansions, build deps and package the chart
   * `HelmTestTask`: test the packaged chart
-    * executes `helm lint` with charts default values
+    * executes `helm lint` with default values
     * for each test:
-      * executes `helm lint` test values
-      * executes `helm template` for test values
-      * runs assertions against render output
+      * executes `helm lint` for test values
+      * executes `helm template` for test specific values
+      * runs any given assertions against rendered output
   * `HelmDeployTask`: uploads the packaged chart
 * preconfigures all tasks according to DSL (see below)
 
@@ -66,7 +66,7 @@ How?
 ### Activate
 ```groovy
 plugins {
-    id 'com.kiwigrid.helm' version '1.3'
+    id 'com.kiwigrid.helm' version '1.3.0'
 }
 ```
 
@@ -181,10 +181,9 @@ Note:
  * `pattern` is a [java regular expression](https://docs.oracle.com/javase/8/docs/api/java/util/regex/Pattern.html) which has to match the complete extracted fragment, you might want to use embedded modifiers (e.g. `(?ms)`)
 
 ### Further work:
-* native integration into gradle publishing
+* support for Helm 3
 * generation of test results report as junit compatible xml
 * provenance files
 * certificate based authentication
 * auto-detect at least local chart dependencies to improve up-to-date checks
-* support for Helm 3
 * support for [kube score](https://github.com/zegl/kube-score)
