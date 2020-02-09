@@ -1,0 +1,3 @@
+rootProject.name = 'gradle-helm-plugin'
+rootProject.buildFileName = 'build.gradle.kts'
+
