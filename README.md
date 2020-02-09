@@ -53,7 +53,7 @@ What?
     * executes `helm lint` with default values
     * for each test:
       * executes `helm lint` for test values
-      * executes `helm template` for test specific values
+      * executes `helm template` for test values
       * runs any given assertions against rendered output
   * `HelmDeployTask`: uploads the packaged chart
 * preconfigures all tasks according to DSL (see below)
