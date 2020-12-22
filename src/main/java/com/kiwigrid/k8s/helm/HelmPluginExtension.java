@@ -89,7 +89,7 @@ public class HelmPluginExtension implements HelmSpec {
 			return helmDownloadUrl;
 		} else {
 			String pathVersion = HelmPlugin.isCanaryVersion(version) ? version : "v" + version;
-			return "https://kubernetes-helm.storage.googleapis.com/helm-"
+			return "https://get.helm.sh/helm-"
 					+ pathVersion
 					+ "-"
 					+ operatingSystem

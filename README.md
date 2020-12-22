@@ -79,7 +79,7 @@ helm {
     version 'canary' // defaults to 2.15.2
     architecture 'amd64' // auto-detected if not given
     operatingSystem 'linux' // auto-detected if not given
-    helmDownloadUrl 'https://example.com/helm.tar.gz' // defaults to 'https://kubernetes-helm.storage.googleapis.com/helm-v${version}-${operatingSystem}-${architecture}.tar.gz'
+    helmDownloadUrl 'https://example.com/helm.tar.gz' // defaults to 'https://get.helm.sh/helm-v${version}-${operatingSystem}-${architecture}.tar.gz'
 
     // will be added via: helm repo add <name> <url>, non-existent will be removed (but 'local' and 'stable')
     repositories {
