@@ -26,7 +26,7 @@ public class HelmPluginExtension implements HelmSpec {
 
 	private File outputDirectory; // "${project.build.directory}/helm/repo"
 
-	private String version = "2.15.2";
+	private String version = "2.17.0";
 
 	private String architecture;
 

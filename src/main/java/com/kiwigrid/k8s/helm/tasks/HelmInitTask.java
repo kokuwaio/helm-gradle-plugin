@@ -3,9 +3,9 @@ package com.kiwigrid.k8s.helm.tasks;
 import java.io.File;
 
 import com.kiwigrid.k8s.helm.HelmPlugin;
+import org.gradle.api.Task;
+import org.gradle.api.specs.Spec;
 import org.gradle.api.tasks.OutputDirectory;
-import org.gradle.api.tasks.OutputFile;
-import org.gradle.api.tasks.OutputFiles;
 import org.gradle.api.tasks.TaskAction;
 
 /**
@@ -15,9 +15,13 @@ import org.gradle.api.tasks.TaskAction;
  */
 public class HelmInitTask extends AbstractHelmTask {
 
+	public HelmInitTask() {
+		onlyIf(task -> !HelmPlugin.isVersion3OrNewer(getVersion()));
+	}
+
 	@TaskAction
 	public void helmInit() {
-		HelmPlugin.helmExec(getProject(), this, "init", "--client-only");
+		HelmPlugin.helmExecSuccess(getProject(), this, "init", "--client-only");
 	}
 
 	@OutputDirectory

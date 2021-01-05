@@ -7,29 +7,8 @@ This is a simple plugin for interacting with [Helm](https://helm.sh/) in gradle 
 
 Why?
 ---
-When the plugin has been created, there hasn't been an alternative. These days there are numerous alternatives:
-* https://github.com/unbroken-dome/gradle-helm-plugin
-  
-  This one does it all but requires a locally installed helm
-* https://github.com/rmee/gradle-plugins/tree/master/helm
 
-  Comes integrated with a `kubectl` plugin and also allows
-  remote release management.
-* https://github.com/wfhartford/gradle-helm
-
-  Extensive multi chart support.
-  
-* https://github.com/frantic777/helmplugin
-
-  Yet another one.
-  
-* https://plugins.gradle.org/plugin/nl.surfsara.sda.buildplugin
-
-  That one is also listed on the gradle plugin portal.
-  
-### But why then?
-
-Use one of the above if they suit your use case. This plugin is different a little bit.
+This plugin is different from the alternatives listed at the bottom.
 
 * Focus on a single thing and do it good: **build charts**.
 * Thus only **limited support for uploads/publishing**. Although
@@ -40,7 +19,7 @@ Use one of the above if they suit your use case. This plugin is different a litt
   For example use the [artifactory gradle plugin](https://www.jfrog.com/confluence/display/RTF/Gradle+Artifactory+Plugin)
   if you're using artifactory.
 * **the only plugin** which has a real **notion of chart tests** including some
-  simple types of assertions.
+  simple types of assertions and a junit compatible XML report.
 
 
 What?
@@ -49,7 +28,7 @@ What?
 * zero config because of sane defaults
 * ready for CI/CD, no dependencies to build environment (downloads appropriate Helm version automatically)
 * provides task types:
-  * `HelmInitTask`: client only helm init, usually done only once
+  * `HelmInitTask`: client only helm init, usually done only once, skipped for v3+
   * `HelmBuildTask`: render the expansions, build deps and package the chart
   * `HelmTestTask`: test the packaged chart
     * executes `helm lint` with default values
@@ -57,18 +36,32 @@ What?
       * executes `helm lint` for test values
       * executes `helm template` for test values
       * runs any given assertions against rendered output
+    * stores test XML report into `.${buildDir}/helm/test/helm-junit-report.xml`
   * `HelmDeployTask`: uploads the packaged chart
 * preconfigures all tasks according to DSL (see below)
 
 Tested with Gradle 6
 
-How?
+Changelog
+---
+v1.5.0
+* initial support for helm 3
+* defaulting to Helm v2.17.0 because of fixed default repo URLs
+* initial support for junit compatible xml test reports
+
+v1.4.0
+* fixes default helm download url
+
+v1.3.0
+* initial open source version
+
+Usage
 ---
 
 ### Activate
 ```groovy
 plugins {
-    id 'com.kiwigrid.helm' version '1.3.0'
+    id 'com.kiwigrid.helm' version '1.5.0'
 }
 ```
 
@@ -76,7 +69,7 @@ plugins {
 ```groovy
 // everything is optional
 helm {
-    version 'canary' // defaults to 2.15.2
+    version '3.0.0' // defaults to 2.17.0
     architecture 'amd64' // auto-detected if not given
     operatingSystem 'linux' // auto-detected if not given
     helmDownloadUrl 'https://example.com/helm.tar.gz' // defaults to 'https://get.helm.sh/helm-v${version}-${operatingSystem}-${architecture}.tar.gz'
@@ -129,7 +122,7 @@ helm {
 ```
 
 #### Noteworthy:
-* the plugin automatically applies the base and attaches tasks as dependencies to the lifecycle tasks
+* the plugin automatically applies the base plugin and attaches tasks as dependencies to the lifecycle tasks
 * If you're using Helm >= `2.8.0` `helmChartTest` is locally rendering 
   all templates for each test value file into `build/helm/test/<value-file-name>/`
   so you can test drive how your templates react to values
@@ -141,7 +134,7 @@ helm {
 #### Author Tests
 The structure of a test yaml file can take 2 different forms.
 
-If on the top level the key `title` and `assert` are found this is
+If on the top level the key `title` and `values` are found this is
 considered a _structured test_. Otherwise it's just a _value test_.
 
 A tests name is determined by the relative path within `src/test/helm`.
@@ -183,9 +176,29 @@ Note:
  * `pattern` is a [java regular expression](https://docs.oracle.com/javase/8/docs/api/java/util/regex/Pattern.html) which has to match the complete extracted fragment, you might want to use embedded modifiers (e.g. `(?ms)`)
 
 ### Further work:
-* support for Helm 3
-* generation of test results report as junit compatible xml
 * provenance files
 * certificate based authentication
 * auto-detect at least local chart dependencies to improve up-to-date checks
 * support for [kube score](https://github.com/zegl/kube-score)
+
+Alternatives
+---
+When the plugin has been created, there hasn't been an alternative. These days there are numerous alternatives:
+* https://github.com/unbroken-dome/gradle-helm-plugin
+
+  This one does it all but requires a locally installed helm
+* https://github.com/rmee/gradle-plugins/tree/master/helm
+
+  Comes integrated with a `kubectl` plugin and also allows
+  remote release management.
+* https://github.com/wfhartford/gradle-helm
+
+  Extensive multi chart support.
+
+* https://github.com/frantic777/helmplugin
+
+  Yet another one.
+
+* https://plugins.gradle.org/plugin/nl.surfsara.sda.buildplugin
+
+  That one is also listed on the gradle plugin portal.

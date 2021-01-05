@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -22,9 +23,9 @@ import org.gradle.api.NamedDomainObjectContainer;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.process.internal.ExecException;
 
 import static com.kiwigrid.k8s.helm.HelmPlugin.helmExec;
-import static com.kiwigrid.k8s.helm.HelmPlugin.helmExecSuccess;
 
 public class RepoSyncTask extends AbstractHelmTask {
 
@@ -113,8 +114,16 @@ public class RepoSyncTask extends AbstractHelmTask {
 	}
 
 	private Map<String, HelmRepository> getKnownHelmRepositories() {
-		String[] output = helmExecSuccess(getProject(), this, "repo", "list");
-		return Arrays.stream(output)
+		HelmPlugin.HelmExecResult execResult = helmExec(getProject(), this, "repo", "list");
+		if (execResult.execResult.getExitValue() == 1
+				&& execResult.output.length >= 1
+				&& String.join(" ", execResult.output).contains("no repositories to show")) {
+			return Collections.emptyMap();
+		}
+		if (execResult.execResult.getExitValue() != 0) {
+			throw new ExecException("Unexpected failed execution:\n" + String.join("\n", execResult.output));
+		}
+		return Arrays.stream(execResult.output)
 				// first line is table header
 				.skip(1L)
 				.map(REPO_PATTERN::matcher)
@@ -163,7 +172,11 @@ public class RepoSyncTask extends AbstractHelmTask {
 	}
 
 	private File getRepositoryYamlFromHelmHome() {
-		return new File(new File(getHelmHomeDirectory(), "repository"), "repositories.yaml");
+		if (HelmPlugin.isVersion3OrNewer(getVersion())) {
+			return new File(getHelmHomeDirectory(), "config/helm/repositories.yaml");
+		} else {
+			return new File(getHelmHomeDirectory(), "repository/repositories.yaml");
+		}
 	}
 
 	@OutputFile

@@ -36,6 +36,7 @@ public class HelmPlugin implements Plugin<Project> {
 	public static final String LINT_WITH_VALUES_VERSION = "2.9.0-rc3";
 	public static final String TEMPLATE_WITH_OUTPUT_VERSION = "2.8.0";
 	public static final String REPO_AUTHENTICATION_VERSION = "2.9.0-rc3";
+	public static final String VERSION_3 = "3.0.0";
 
 	public static String getHelmExecutable(HelmSpec helmSpec) {
 		return OperatingSystem.current()
@@ -52,6 +53,10 @@ public class HelmPlugin implements Plugin<Project> {
 
 	public static boolean authenticatedReposSupported(String version) {
 		return versionIsGreaterThanOrEquals(version, REPO_AUTHENTICATION_VERSION);
+	}
+
+	public static boolean isVersion3OrNewer(String version) {
+		return versionIsGreaterThanOrEquals(version, VERSION_3);
 	}
 
 	private static boolean versionIsGreaterThanOrEquals(String availableVersionString, String featureVersion) {
@@ -165,12 +170,20 @@ public class HelmPlugin implements Plugin<Project> {
 		return new File(helmSpec.getHelmExecutableDirectory(), "helm.tar.gz");
 	}
 
-	public static ExecSpec configureFromExtension(ExecSpec spec, HelmSpec helmSpec) {
+	public static void configureFromExtension(ExecSpec spec, HelmSpec helmSpec) {
 		spec.setWorkingDir(helmSpec.getHelmExecutableDirectory());
 		spec.setExecutable(getHelmExecutable(helmSpec));
-		spec.args("--home=" + helmSpec.getHelmHomeDirectory()
-				.getAbsolutePath());
-		return spec;
+		if (!isVersion3OrNewer(helmSpec.getVersion())) {
+			// v2 accepts a parameter
+			spec.args("--home=" + helmSpec.getHelmHomeDirectory()
+					.getAbsolutePath());
+		} else {
+			// --home is being replaced by env variables since v3
+			String absolutePathToHelmHome = helmSpec.getHelmHomeDirectory().getAbsolutePath();
+			spec.environment("XDG_CACHE_HOME", absolutePathToHelmHome + "/cache");
+			spec.environment("XDG_CONFIG_HOME", absolutePathToHelmHome + "/config");
+			spec.environment("XDG_DATA_HOME", absolutePathToHelmHome + "/data");
+		}
 	}
 
 	public static Action<ExecSpec> configureFromExtension(HelmSpec helmSpec, Object... args) {
@@ -215,6 +228,14 @@ public class HelmPlugin implements Plugin<Project> {
 		public HelmExecResult(ExecResult execResult, String[] output) {
 			this.execResult = execResult;
 			this.output = output;
+		}
+
+		public boolean succeeded() {
+			return execResult.getExitValue() == 0;
+		}
+
+		public boolean failed() {
+			return !succeeded();
 		}
 	}
 

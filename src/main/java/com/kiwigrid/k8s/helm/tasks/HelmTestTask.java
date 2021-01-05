@@ -3,6 +3,7 @@ package com.kiwigrid.k8s.helm.tasks;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -28,21 +29,25 @@ import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.tasks.VerificationTask;
 import org.gradle.api.tasks.options.Option;
 import org.gradle.internal.exceptions.DefaultMultiCauseException;
 import org.gradle.language.base.plugins.LifecycleBasePlugin;
-import org.gradle.process.internal.ExecException;
 
-public class HelmTestTask extends AbstractHelmTask {
+@SuppressWarnings("UnstableApiUsage")
+public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 
 	public static final String VALUES_OPTION = "--values";
+	public static final String FAILURE_END_TAG = "</failure>";
 	private final DirectoryProperty tests;
 
 	private final ConfigurableFileCollection charts;
 
-	private File testOutputs;
+	private final File testOutputs;
 
 	private String testPattern = ".*";
+
+	private boolean ignoreFailures;
 
 	@Inject
 	public HelmTestTask(ObjectFactory objectFactory) {
@@ -60,7 +65,7 @@ public class HelmTestTask extends AbstractHelmTask {
 	}
 
 	@TaskAction
-	public void runTests() {
+	public void runTests() throws IOException {
 		File[] chartFolders = getOutputDirectory().listFiles(File::isDirectory);
 		if (chartFolders == null || chartFolders.length == 0) {
 			return;
@@ -88,25 +93,57 @@ public class HelmTestTask extends AbstractHelmTask {
 				.map(file -> fromYamlFile(commonTestPathPrefix, file))
 				.collect(Collectors.toList());
 		List<AssertionError> failures = new ArrayList<>();
+		File testJunitReportFile = new File(testOutputs, "helm-junit-report.xml");
+		getLogger().info("Writing junit xml to {}", testJunitReportFile.getAbsolutePath());
+		StringBuilder junitReport = new StringBuilder();
+		junitReport.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+		junitReport.append("<testsuites>");
 		Arrays.stream(chartFolders)
 				.forEach(chartFolder -> {
+					junitReport
+							.append("<testsuite name=\"")
+							.append(chartFolder.getName())
+							.append("\" tests=\"")
+							.append(testCases.size() + 1)
+							.append("\">");
 					runTestsForChart(lintWithValuesSupported,
 							templateWithOutputSupported,
 							chartFolder,
 							testCases,
-							failures);
+							failures,
+							junitReport);
+					junitReport.append("</testsuite>");
 				});
+		junitReport.append("</testsuites>");
+		try (PrintWriter writer = new PrintWriter(new FileWriter(testJunitReportFile))) {
+			writer.write(junitReport.toString());
+		}
+		getLogger().debug("Test results:\n{}", junitReport);
 		if (!failures.isEmpty()) {
 			Logger logger = getLogger();
 			logger.error("There have been test failures.");
 			failures.forEach(assertionError -> logger.info("Test Failure", assertionError));
-			throw new DefaultMultiCauseException("Failing tests.", failures);
+			if (!ignoreFailures) {
+				throw new DefaultMultiCauseException("Failing tests.", failures);
+			}
 		}
 	}
 
-	private void runTestsForChart(boolean lintWithValuesSupported, boolean templateWithOutputSupported, File chartFolder, List<HelmTestCase> testCases, List<AssertionError> failures) {
+	private void runTestsForChart(boolean lintWithValuesSupported, boolean templateWithOutputSupported, File chartFolder, List<HelmTestCase> testCases, List<AssertionError> failures, StringBuilder junitReport) {
 		getLogger().info("Linting {} with default values...", chartFolder.getName());
-		HelmPlugin.helmExecSuccess(getProject(), this, "lint", chartFolder.getAbsolutePath());
+		junitReport.append("<testcase name=\"defaultValueLinting\" classname=\"HelmPlugin\">");
+		HelmPlugin.HelmExecResult lintExecResult = HelmPlugin.helmExec(getProject(),
+				this,
+				"lint",
+				chartFolder.getAbsolutePath());
+		if (lintExecResult.execResult.getExitValue() != 0) {
+			junitReport
+					.append("<failure message\"Linting with default values failed\">")
+					.append(String.join("\n", lintExecResult.output))
+					.append(FAILURE_END_TAG);
+			failures.add(new AssertionError("Linting with default values failed"));
+		}
+		junitReport.append("</testcase>");
 		getProject().delete(testOutputs);
 		Pattern pattern = Pattern.compile(testPattern);
 		testCases
@@ -115,6 +152,15 @@ public class HelmTestTask extends AbstractHelmTask {
 					boolean match = pattern.matcher(helmTestCase.name).matches();
 					if (!match) {
 						getLogger().info("Skipping '{}', not matching '{}'", helmTestCase.name, testPattern);
+						junitReport
+								.append("<testcase name=\"")
+								.append(helmTestCase.title)
+								.append("\"")
+								.append(" classname=\"")
+								.append(helmTestCase.name)
+								.append("\"><skipped message=\"name does not match pattern")
+								.append(testPattern)
+								.append("\" /></testcase>");
 					}
 					return match;
 				})
@@ -123,47 +169,76 @@ public class HelmTestTask extends AbstractHelmTask {
 						lintWithValuesSupported,
 						templateWithOutputSupported,
 						chartFolder,
+						junitReport,
 						failures));
 	}
 
-	private void runSingleTestCase(HelmTestCase helmTestCase, boolean lintWithValuesSupported, boolean templateWithOutputSupported, File chartFolder, List<AssertionError> failures) {
+	private void runSingleTestCase(HelmTestCase helmTestCase, boolean lintWithValuesSupported, boolean templateWithOutputSupported, File chartFolder, StringBuilder junitReport, List<AssertionError> failures) {
 		getLogger().info("Running test case {}: {}", helmTestCase.name, helmTestCase.title);
+		junitReport
+				.append("<testcase name=\"")
+				.append(helmTestCase.title)
+				.append("\"")
+				.append(" classname=\"")
+				.append(helmTestCase.name)
+				.append("\">");
+
 		if (helmTestCase.succeed) {
 			if (lintWithValuesSupported) {
-				helmLint(chartFolder, helmTestCase, failures);
+				HelmPlugin.HelmExecResult lintExecResult = helmLint(chartFolder, helmTestCase);
+				if (lintExecResult.failed()) {
+					junitReport
+							.append("<failure message=\"Linting with test values failed\">")
+							.append(String.join("\n", lintExecResult.output))
+							.append(FAILURE_END_TAG);
+					failures.add(new AssertionError("Linting with test values failed"));
+				}
 			}
 			if (templateWithOutputSupported) {
 				getLogger().debug("Templating and asserting ...");
 				File testCaseOutputFolder = new File(testOutputs, helmTestCase.name);
 				testCaseOutputFolder.mkdirs();
-				if (helmTemplate(chartFolder, helmTestCase, testCaseOutputFolder, failures)) {
-					return;
+				HelmPlugin.HelmExecResult helmExecResult = helmTemplate(chartFolder,
+						helmTestCase,
+						testCaseOutputFolder
+				);
+				if (helmExecResult.succeeded()) {
+					runAssertions(helmTestCase, testCaseOutputFolder, chartFolder.getName(), junitReport, failures);
+				} else {
+					junitReport.append("<failure message=\"failed to template chart\">")
+							.append(String.join("\n", helmExecResult.output))
+							.append(FAILURE_END_TAG);
+					failures.add(new AssertionError("failed to template chart"));
 				}
-				runAssertions(helmTestCase, testCaseOutputFolder, chartFolder.getName(), failures);
 			}
 		} else {
-			try {
-				HelmPlugin.helmExecFail(
-						getProject(),
-						this,
-						"template",
-						VALUES_OPTION,
-						helmTestCase.valueFile.getAbsolutePath(),
-						chartFolder.getAbsolutePath());
-				// not throwing an exception is unexpected, the test shall not succeed
-			} catch (ExecException e) {
+			HelmPlugin.HelmExecResult template = HelmPlugin.helmExec(
+					getProject(),
+					this,
+					"template",
+					VALUES_OPTION,
+					helmTestCase.valueFile.getAbsolutePath(),
+					chartFolder.getAbsolutePath());
+			if (template.succeeded()) {
+				junitReport.append("<failure message=\"failed to fail template\">")
+						.append("Templating should fail, but succeeded.")
+						.append(FAILURE_END_TAG);
 				failures.add(new AssertionError("Helm template for test '"
 						+ helmTestCase.name
-						+ "' succeeded when it shall not", e));
+						+ "' succeeded when it shall not"));
 			}
 		}
+		junitReport.append("</testcase>");
 	}
 
-	private void runAssertions(HelmTestCase helmTestCase, File testCaseOutputFolder, String chartName, List<AssertionError> failures) {
+	private void runAssertions(HelmTestCase helmTestCase, File testCaseOutputFolder, String chartName, StringBuilder junitReport, List<AssertionError> failures) {
 		getLogger().info("running assertions...");
 		helmTestCase.assertions.forEach(helmTestAssertion -> {
 			File input = new File(testCaseOutputFolder, chartName + File.separator + helmTestAssertion.file);
 			if (!input.exists() || !input.isFile()) {
+				junitReport.append("<failure message=\"failed to find file ")
+						.append(input.getAbsolutePath())
+						.append("\" />");
 				failures.add(new AssertionError("Test '"
 						+ helmTestCase.title
 						+ " requires file  "
@@ -174,42 +249,36 @@ public class HelmTestTask extends AbstractHelmTask {
 			try {
 				helmTestAssertion.statement.execute(input);
 			} catch (AssertionError e) {
+				junitReport.append("<failure message=\"")
+						.append(e.getMessage())
+						.append("\" />");
 				failures.add(e);
 			}
 		});
 	}
 
-	private boolean helmTemplate(File chartFolder, HelmTestCase helmTestCase, File testCaseOutputFolder, List<AssertionError> failures) {
-		try {
-			HelmPlugin.helmExecSuccess(
-					getProject(),
-					this,
-					"template",
-					"--values",
-					helmTestCase.valueFile.getAbsolutePath(),
-					"--output-dir",
-					testCaseOutputFolder.getAbsolutePath(),
-					chartFolder.getAbsolutePath());
-		} catch (ExecException e) {
-			failures.add(new AssertionError("Templating failed for " + helmTestCase.name, e));
-			return true;
-		}
-		return false;
+	private HelmPlugin.HelmExecResult helmTemplate(File chartFolder, HelmTestCase helmTestCase, File testCaseOutputFolder) {
+		return HelmPlugin.helmExec(
+				getProject(),
+				this,
+				"template",
+				VALUES_OPTION,
+				helmTestCase.valueFile.getAbsolutePath(),
+				"--output-dir",
+				testCaseOutputFolder.getAbsolutePath(),
+				chartFolder.getAbsolutePath());
 	}
 
-	private void helmLint(File chartFolder, HelmTestCase helmTestCase, List<AssertionError> failures) {
+	private HelmPlugin.HelmExecResult helmLint(File chartFolder, HelmTestCase helmTestCase) {
 		getLogger().debug("Linting ...");
-		try {
-			String[] output = HelmPlugin.helmExecSuccess(
-					getProject(),
-					this,
-					"lint",
-					"--values",
-					helmTestCase.valueFile.getAbsolutePath(),
-					chartFolder.getAbsolutePath());
-		} catch (ExecException e) {
-			failures.add(new AssertionError("Linting failed for " + helmTestCase.name, e));
-		}
+		return HelmPlugin.helmExec(
+				getProject(),
+				this,
+				"lint",
+				VALUES_OPTION,
+				helmTestCase.valueFile.getAbsolutePath(),
+				chartFolder.getAbsolutePath());
+
 	}
 
 	@Input
@@ -236,6 +305,16 @@ public class HelmTestTask extends AbstractHelmTask {
 	@InputFiles
 	public ConfigurableFileCollection getCharts() {
 		return charts;
+	}
+
+	@Override
+	public void setIgnoreFailures(boolean ignoreFailures) {
+		this.ignoreFailures = ignoreFailures;
+	}
+
+	@Override
+	public boolean getIgnoreFailures() {
+		return ignoreFailures;
 	}
 
 	private static class HelmTestCase {

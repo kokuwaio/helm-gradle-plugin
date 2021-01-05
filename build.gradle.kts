@@ -1,5 +1,5 @@
 group = "com.kiwigrid"
-version = "1.4.0"
+version = "1.5.0"
 
 plugins {
     id("java-gradle-plugin")
