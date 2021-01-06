@@ -176,6 +176,7 @@ Note:
  * `pattern` is a [java regular expression](https://docs.oracle.com/javase/8/docs/api/java/util/regex/Pattern.html) which has to match the complete extracted fragment, you might want to use embedded modifiers (e.g. `(?ms)`)
 
 ### Further work:
+* tests
 * provenance files
 * certificate based authentication
 * auto-detect at least local chart dependencies to improve up-to-date checks
