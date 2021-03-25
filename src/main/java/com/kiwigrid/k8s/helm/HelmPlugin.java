@@ -157,7 +157,7 @@ public class HelmPlugin implements Plugin<Project> {
 			});
 			// gradle requires an anonymous class for actions for UP-TO-DATE checks to work.
 			//noinspection Convert2Lambda
-			download.doLast("extractHelm", new Action<>() {
+			download.doLast("extractHelm", new Action<Task>() {
 				@Override
 				public void execute(Task task) {
 					project.copy(copySpec -> {
