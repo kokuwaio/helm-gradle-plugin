@@ -3,12 +3,12 @@ package com.kiwigrid.k8s.helm.tasks;
 import java.io.File;
 
 import com.kiwigrid.k8s.helm.HelmSpec;
-import org.gradle.api.internal.AbstractTask;
+import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.Internal;
 
-public class AbstractHelmTask extends AbstractTask implements HelmSpec {
+public class AbstractHelmTask extends DefaultTask implements HelmSpec {
 
 	private File helmExecutableDirectory;
 	private File outputDirectory;
