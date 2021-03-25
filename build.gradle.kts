@@ -15,6 +15,8 @@ publishing {
 
 repositories {
     mavenCentral()
+    mavenLocal()
+    gradlePluginPortal()
 }
 
 dependencies {
@@ -49,10 +51,4 @@ pluginBundle {
             version = project.version.toString()
         }
     }
-}
-
-repositories {
-    mavenLocal()
-    mavenCentral()
-    gradlePluginPortal()
 }
