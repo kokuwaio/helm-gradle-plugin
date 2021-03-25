@@ -1,8 +1,6 @@
 package com.kiwigrid.k8s.helm.tasks;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.stream.Collectors;
 
 import com.kiwigrid.k8s.helm.HelmPlugin;
 import org.gradle.api.logging.Logger;
