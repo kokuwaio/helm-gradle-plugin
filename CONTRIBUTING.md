@@ -16,12 +16,17 @@ gradle clean && gradle publishToMavenLocal
 ```
 
 you can optionally also change the version to be published in your local maven repo by changing `gradle.properties` file.
+Or as a command line argument:
+
+```
+gradle publishToMavenLocal --project-prop version=1.2.3
+```
 
 Once the publishing is done, simply use that particular version. For example:
 
 ```
-helm {
-    version '0.0.0-SNAPSHOT'
+plugins {
+    id 'com.kiwigrid.helm' version '0.0.0-SNAPSHOT'
     ....
 ```
 
