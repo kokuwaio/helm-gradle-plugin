@@ -18,7 +18,7 @@ public class HelmInitTask extends AbstractHelmTask {
 	private final Logger logger = getLogger();
 
 	public HelmInitTask() {
-		onlyIf(this::newerThan30);
+		onlyIf(this::notNewerThan30);
 	}
 
 	@TaskAction
@@ -32,7 +32,7 @@ public class HelmInitTask extends AbstractHelmTask {
 		return new File(super.getHelmHomeDirectory(), "plugins");
 	}
 
-	private boolean newerThan30(Task task) {
+	private boolean notNewerThan30(Task task) {
 		String version = getVersion();
 		logger.debug("found version : " + version + " of helm");
 		boolean is30OrNewer = HelmPlugin.isVersion3OrNewer(version);
