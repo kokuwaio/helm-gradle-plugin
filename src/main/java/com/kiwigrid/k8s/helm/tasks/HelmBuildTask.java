@@ -64,14 +64,28 @@ public class HelmBuildTask extends AbstractHelmTask {
 
 	private void helmPackage(File chartFolder) {
 		// package
-		HelmPlugin.helmExec(
-				getProject(),
-				this,
-				"package",
-				"--save=false",
-				"--destination",
-				getOutputDirectory().getAbsolutePath(),
-				chartFolder.getAbsolutePath());
+		boolean is30OrNewer = HelmPlugin.isVersion3OrNewer(getVersion());
+
+		Object [] arguments;
+		if(is30OrNewer) {
+			arguments = new Object[]{
+					"package",
+					"--destination",
+					getOutputDirectory().getAbsolutePath(),
+					chartFolder.getAbsolutePath()
+			};
+		} else {
+			arguments = new Object[]{
+					"package",
+					"--save=false",
+					"--destination",
+					getOutputDirectory().getAbsolutePath(),
+					chartFolder.getAbsolutePath()
+			};
+		}
+
+		HelmPlugin.helmExecSuccess(getProject(), this, arguments);
+		getLogger().lifecycle("packaged chart to : " + getOutputDirectory().getAbsolutePath());
 	}
 
 	private void helmDependencyBuild(File chartFolder) {
