@@ -33,8 +33,6 @@ import org.yaml.snakeyaml.error.YAMLException;
 
 public class HelmPlugin implements Plugin<Project> {
 
-	private static Logger logger;
-
 	public static final Yaml YAML = new Yaml();
 	public static final String EXTENSION_NAME = "helm";
 
@@ -80,7 +78,6 @@ public class HelmPlugin implements Plugin<Project> {
 
 	@Override
 	public void apply(Project project) {
-		logger = project.getLogger();
 		// apply required plugins
 		project.getPluginManager().apply("base");
 		project.getPluginManager().apply("de.undercouch.download");
@@ -217,6 +214,7 @@ public class HelmPlugin implements Plugin<Project> {
 	}
 
 	public static HelmExecResult helmExec(Project project, HelmSpec helmSpec, Object... args) {
+		Logger logger = project.getLogger();
 		if(logger.isDebugEnabled()) {
 			String command = Arrays.stream(args)
 				                   .map(Object::toString)
