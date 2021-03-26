@@ -18,11 +18,14 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.kiwigrid.k8s.helm.HelmPlugin;
+import com.kiwigrid.k8s.helm.HelmPluginExtension;
 import com.kiwigrid.k8s.helm.HelmRepository;
 import org.gradle.api.NamedDomainObjectContainer;
+import org.gradle.api.logging.Logger;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.internal.os.OperatingSystem;
 import org.gradle.process.internal.ExecException;
 
 import static com.kiwigrid.k8s.helm.HelmPlugin.helmExec;
@@ -33,9 +36,12 @@ public class RepoSyncTask extends AbstractHelmTask {
 
 	private NamedDomainObjectContainer<HelmRepository> repositories;
 
-	private File repositoryYamlOutput;
+	private final Logger logger;
+
+	private final File repositoryYamlOutput;
 
 	public RepoSyncTask() {
+		logger = getLogger();
 		repositoryYamlOutput = new File(getProject().getBuildDir(), "helm/out/repocopy.yaml");
 		getOutputs().upToDateWhen(element -> yamlFilesEqual(repositoryYamlOutput, getRepositoryYamlFromHelmHome()));
 	}
@@ -172,11 +178,23 @@ public class RepoSyncTask extends AbstractHelmTask {
 	}
 
 	private File getRepositoryYamlFromHelmHome() {
-		if (HelmPlugin.isVersion3OrNewer(getVersion())) {
-			return new File(getHelmHomeDirectory(), "config/helm/repositories.yaml");
+		File helmHomeDirectory = getHelmHomeDirectory();
+		File repositoriesFile;
+		if(OperatingSystem.current().isMacOsX()) {
+			repositoriesFile = new File(System.getenv("HOME") + "/Library/Preferences/helm/repositories.yaml");
+		} else if (HelmPlugin.isVersion3OrNewer(getVersion())) {
+			repositoriesFile = new File(helmHomeDirectory, "config/helm/repositories.yaml");
 		} else {
-			return new File(getHelmHomeDirectory(), "repository/repositories.yaml");
+			repositoriesFile = new File(helmHomeDirectory, "repository/repositories.yaml");
 		}
+
+		logger.debug("will load repositories.yaml from : " + repositoriesFile.getAbsolutePath());
+
+		if(!repositoriesFile.exists()) {
+			logger.error("can not find repositories.yaml file. Need to set 'helmHomeDirectory' ?");
+			logger.error("if you are running this on Mac, check : /Users/<yourUser>/Library/Preferences/helm/repositories.yaml");
+		}
+		return repositoriesFile;
 	}
 
 	@OutputFile
