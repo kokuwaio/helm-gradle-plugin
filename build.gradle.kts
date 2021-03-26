@@ -7,16 +7,8 @@ plugins {
     id ("maven-publish")
 }
 
-publishing {
-    repositories {
-        mavenLocal()
-    }
-}
-
 repositories {
     mavenCentral()
-    mavenLocal()
-    gradlePluginPortal()
 }
 
 dependencies {
