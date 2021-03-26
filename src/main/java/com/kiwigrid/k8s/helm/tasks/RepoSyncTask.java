@@ -25,6 +25,7 @@ import org.gradle.api.logging.Logger;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.internal.os.OperatingSystem;
 import org.gradle.process.internal.ExecException;
 
 import static com.kiwigrid.k8s.helm.HelmPlugin.helmExec;
@@ -179,19 +180,15 @@ public class RepoSyncTask extends AbstractHelmTask {
 	private File getRepositoryYamlFromHelmHome() {
 		File helmHomeDirectory = getHelmHomeDirectory();
 		File repositoriesFile;
-		if (HelmPlugin.isVersion3OrNewer(getVersion())) {
+		if(OperatingSystem.current().isMacOsX()) {
+			repositoriesFile = new File(System.getenv("HOME") + "/Library/Preferences/helm/repositories.yaml");
+		} else if (HelmPlugin.isVersion3OrNewer(getVersion())) {
 			repositoriesFile = new File(helmHomeDirectory, "config/helm/repositories.yaml");
 		} else {
 			repositoriesFile = new File(helmHomeDirectory, "repository/repositories.yaml");
 		}
 
-		// on mac paths differ : https://github.com/hypnoglow/helm-s3/issues/91#issuecomment-553696113
-		if("darwin".equals(getProject().getExtensions().getByType(HelmPluginExtension.class).getOperatingSystem())) {
-			logger.info("detected 'darwin' operating system");
-			logger.info("will load repositories.yaml from : "
-					+ System.getenv("HOME") + "/Library/Preferences/helm");
-			repositoriesFile = new File(System.getenv("HOME") + "/Library/Preferences/helm/repositories.yaml");
-		}
+		logger.debug("will load repositories.yaml from : " + repositoriesFile.getAbsolutePath());
 
 		if(!repositoriesFile.exists()) {
 			logger.error("can not find repositories.yaml file. Need to set 'helmHomeDirectory' ?");
