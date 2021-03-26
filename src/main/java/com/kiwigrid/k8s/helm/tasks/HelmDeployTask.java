@@ -11,8 +11,8 @@ import java.util.Base64;
 
 import com.kiwigrid.k8s.helm.HelmRepository;
 import org.apache.commons.io.IOUtils;
+import org.gradle.api.DefaultTask;
 import org.gradle.api.file.ConfigurableFileTree;
-import org.gradle.api.internal.AbstractTask;
 import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
@@ -23,7 +23,7 @@ import org.gradle.api.tasks.TaskAction;
  *
  * @author Jörg Eichhorn {@literal <joerg.eichhorn@kiwigrid.com>}
  */
-public class HelmDeployTask extends AbstractTask {
+public class HelmDeployTask extends DefaultTask {
 
 	private HelmRepository target;
 
