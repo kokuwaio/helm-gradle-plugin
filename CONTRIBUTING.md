@@ -12,7 +12,7 @@ Build plugin locally
 To build and test locally, simply issue : 
 
 ```
-gradle clean && gradle publishToMavenLocal
+gradle clean publishToMavenLocal
 ```
 
 you can optionally also change the version to be published in your local maven repo by changing `gradle.properties` file.
