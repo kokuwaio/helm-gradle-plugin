@@ -181,7 +181,12 @@ public class RepoSyncTask extends AbstractHelmTask {
 		File helmHomeDirectory = getHelmHomeDirectory();
 		File repositoriesFile;
 		if(OperatingSystem.current().isMacOsX()) {
-			repositoriesFile = new File(System.getenv("HOME") + "/Library/Preferences/helm/repositories.yaml");
+			if(HelmPlugin.isVersion3OrNewer(getVersion())) {
+				repositoriesFile = new File(System.getenv("HOME") + "/Library/Preferences/helm/repositories.yaml");
+			} else {
+				repositoriesFile = new File(System.getenv("HOME") + "/.helm/repository/repositories.yaml");
+			}
+
 		} else if (HelmPlugin.isVersion3OrNewer(getVersion())) {
 			repositoriesFile = new File(helmHomeDirectory, "config/helm/repositories.yaml");
 		} else {
