@@ -186,7 +186,6 @@ public class RepoSyncTask extends AbstractHelmTask {
 			} else {
 				repositoriesFile = new File(System.getenv("HOME") + "/.helm/repository/repositories.yaml");
 			}
-
 		} else if (HelmPlugin.isVersion3OrNewer(getVersion())) {
 			repositoriesFile = new File(helmHomeDirectory, "config/helm/repositories.yaml");
 		} else {
@@ -197,7 +196,11 @@ public class RepoSyncTask extends AbstractHelmTask {
 
 		if(!repositoriesFile.exists()) {
 			logger.error("can not find repositories.yaml file. Need to set 'helmHomeDirectory' ?");
-			logger.error("if you are running this on Mac, check : /Users/<yourUser>/Library/Preferences/helm/repositories.yaml");
+			if(HelmPlugin.isVersion3OrNewer(getVersion())) {
+				logger.error("if you are running this on Mac, check : /Users/<yourUser>/Library/Preferences/helm/repositories.yaml");
+			} else {
+				logger.error("if you are running this on Mac, check : /Users/<yourUser>/.helm/repository/repositories.yaml");
+			}
 		}
 		return repositoriesFile;
 	}
