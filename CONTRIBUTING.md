@@ -6,6 +6,30 @@ What to contribute
 
 Pick a [ticket](https://github.com/kiwigrid/helm-gradle-plugin/issues), or an item off the [future work list](README.md#further-work) in the or just the one feature you want to see here.
 
+Build plugin locally
+---
+
+To build and test locally, simply issue : 
+
+```
+gradle clean publishToMavenLocal
+```
+
+you can optionally also change the version to be published in your local maven repo by changing `gradle.properties` file.
+Or as a command line argument:
+
+```
+gradle publishToMavenLocal --project-prop version=1.2.3
+```
+
+Once the publishing is done, simply use that particular version. For example:
+
+```
+plugins {
+    id 'com.kiwigrid.helm' version '0.0.0-SNAPSHOT'
+    ....
+```
+
 How
 ---
 
