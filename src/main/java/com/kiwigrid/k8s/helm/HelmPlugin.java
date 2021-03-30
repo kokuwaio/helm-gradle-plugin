@@ -4,7 +4,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.stream.Collectors;
 
 import com.kiwigrid.k8s.helm.tasks.HelmDeployTask;
 import com.kiwigrid.k8s.helm.tasks.HelmBuildTask;
@@ -16,6 +18,7 @@ import org.gradle.api.Action;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
+import org.gradle.api.logging.Logger;
 import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.tasks.TaskContainer;
 import org.gradle.api.tasks.TaskProvider;
@@ -73,6 +76,7 @@ public class HelmPlugin implements Plugin<Project> {
 		return "canary".equals(version);
 	}
 
+	@Override
 	public void apply(Project project) {
 		// apply required plugins
 		project.getPluginManager().apply("base");
@@ -210,6 +214,13 @@ public class HelmPlugin implements Plugin<Project> {
 	}
 
 	public static HelmExecResult helmExec(Project project, HelmSpec helmSpec, Object... args) {
+		Logger logger = project.getLogger();
+		if(logger.isDebugEnabled()) {
+			String command = Arrays.stream(args)
+				                   .map(Object::toString)
+				                   .collect(Collectors.joining(" "));
+			logger.debug("Executing : helm " + command);
+		}
 		ByteArrayOutputStream outStream = new ByteArrayOutputStream();
 		ExecResult execResult = project.exec(execSpec -> {
 			configureFromExtension(helmSpec, args).execute(execSpec);
@@ -218,6 +229,9 @@ public class HelmPlugin implements Plugin<Project> {
 			execSpec.setIgnoreExitValue(true);
 		});
 		String[] lines = outStream.toString().split("\n");
+		if(logger.isDebugEnabled()){
+			logger.debug("Result of previous command : \n" + String.join("\n", lines));
+		}
 		return new HelmExecResult(execResult, lines);
 	}
 
