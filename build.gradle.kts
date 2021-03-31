@@ -1,10 +1,12 @@
 group = "com.kiwigrid"
-version = "${version}"
+version = "$version"
 
 plugins {
     id("java-gradle-plugin")
     id("com.gradle.plugin-publish").version("0.12.0")
+    id ("maven-publish")
 }
+
 repositories {
     mavenCentral()
 }
