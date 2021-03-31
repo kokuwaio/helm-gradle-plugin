@@ -12,7 +12,7 @@ import com.kiwigrid.k8s.helm.tasks.HelmDeployTask;
 import com.kiwigrid.k8s.helm.tasks.HelmBuildTask;
 import com.kiwigrid.k8s.helm.tasks.HelmInitTask;
 import com.kiwigrid.k8s.helm.tasks.HelmTestTask;
-import com.kiwigrid.k8s.helm.tasks.RepoSyncTask;
+import com.kiwigrid.k8s.helm.tasks.HelmRepoSyncTask;
 import de.undercouch.gradle.tasks.download.Download;
 import org.gradle.api.Action;
 import org.gradle.api.Plugin;
@@ -107,9 +107,9 @@ public class HelmPlugin implements Plugin<Project> {
 				}
 		);
 
-		TaskProvider<RepoSyncTask> helmRepoSync = projectTasks.register(
+		TaskProvider<HelmRepoSyncTask> helmRepoSync = projectTasks.register(
 				"helmRepoSync",
-				RepoSyncTask.class,
+				HelmRepoSyncTask.class,
 				repoSyncTask -> {
 					repoSyncTask.dependsOn(helmInit);
 					repoSyncTask.setRepositories(extension.getRepositories());

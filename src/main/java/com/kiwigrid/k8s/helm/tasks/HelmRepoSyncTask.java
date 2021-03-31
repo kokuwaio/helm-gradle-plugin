@@ -18,19 +18,18 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.kiwigrid.k8s.helm.HelmPlugin;
-import com.kiwigrid.k8s.helm.HelmPluginExtension;
 import com.kiwigrid.k8s.helm.HelmRepository;
 import org.gradle.api.NamedDomainObjectContainer;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
-import org.gradle.internal.os.OperatingSystem;
 import org.gradle.process.internal.ExecException;
 
 import static com.kiwigrid.k8s.helm.HelmPlugin.helmExec;
+import static com.kiwigrid.k8s.helm.HelmPlugin.helmExecSuccess;
 
-public class RepoSyncTask extends AbstractHelmTask {
+public class HelmRepoSyncTask extends AbstractHelmTask {
 
 	private static final Pattern REPO_PATTERN = Pattern.compile("(\\w+)\\s+(.+)");
 
@@ -40,7 +39,7 @@ public class RepoSyncTask extends AbstractHelmTask {
 
 	private final File repositoryYamlOutput;
 
-	public RepoSyncTask() {
+	public HelmRepoSyncTask() {
 		logger = getLogger();
 		repositoryYamlOutput = new File(getProject().getBuildDir(), "helm/out/repocopy.yaml");
 		getOutputs().upToDateWhen(element -> yamlFilesEqual(repositoryYamlOutput, getRepositoryYamlFromHelmHome()));
@@ -152,7 +151,7 @@ public class RepoSyncTask extends AbstractHelmTask {
 			return;
 		}
 		if (repo.isAuthenticated()) {
-			helmExec(getProject(), this,
+			helmExecSuccess(getProject(), this,
 					"repo",
 					"add",
 					repo.getName(),
@@ -161,7 +160,7 @@ public class RepoSyncTask extends AbstractHelmTask {
 					"--password=" + repo.getPassword()
 			);
 		} else {
-			helmExec(getProject(), this,
+			helmExecSuccess(getProject(), this,
 					"repo",
 					"add",
 					repo.getName(),
@@ -200,7 +199,7 @@ public class RepoSyncTask extends AbstractHelmTask {
 		return repositories;
 	}
 
-	public RepoSyncTask setRepositories(NamedDomainObjectContainer<HelmRepository> repositories) {
+	public HelmRepoSyncTask setRepositories(NamedDomainObjectContainer<HelmRepository> repositories) {
 		this.repositories = repositories;
 		return this;
 	}
