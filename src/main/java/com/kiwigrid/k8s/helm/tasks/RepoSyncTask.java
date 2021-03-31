@@ -180,20 +180,13 @@ public class RepoSyncTask extends AbstractHelmTask {
 	private File getRepositoryYamlFromHelmHome() {
 		File helmHomeDirectory = getHelmHomeDirectory();
 		File repositoriesFile;
-		if(OperatingSystem.current().isMacOsX()) {
-			repositoriesFile = new File(System.getenv("HOME") + "/Library/Preferences/helm/repositories.yaml");
-		} else if (HelmPlugin.isVersion3OrNewer(getVersion())) {
+		if (HelmPlugin.isVersion3OrNewer(getVersion())) {
 			repositoriesFile = new File(helmHomeDirectory, "config/helm/repositories.yaml");
 		} else {
 			repositoriesFile = new File(helmHomeDirectory, "repository/repositories.yaml");
 		}
 
 		logger.debug("will load repositories.yaml from : " + repositoriesFile.getAbsolutePath());
-
-		if(!repositoriesFile.exists()) {
-			logger.error("can not find repositories.yaml file. Need to set 'helmHomeDirectory' ?");
-			logger.error("if you are running this on Mac, check : /Users/<yourUser>/Library/Preferences/helm/repositories.yaml");
-		}
 		return repositoriesFile;
 	}
 
