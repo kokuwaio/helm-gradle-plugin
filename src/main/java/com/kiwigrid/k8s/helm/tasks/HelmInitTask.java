@@ -36,9 +36,9 @@ public class HelmInitTask extends AbstractHelmTask {
 		String version = getVersion();
 		boolean is30OrNewer = HelmPlugin.isVersion3OrNewer(version);
 		if(is30OrNewer) {
-			logger.lifecycle("version : " + version + " is higher than 3.0. 'HelmInitTask' is a NO-OP");
+			logger.lifecycle("version : {} is higher than 3.0. 'HelmInitTask' is a NO-OP", version);
 		} else {
-			logger.lifecycle("will issue : './helm init --client-only' in : " + getHelmHomeDirectory());
+			logger.lifecycle("will issue : './helm init --client-only' in : {}", getHelmHomeDirectory());
 		}
 		return !is30OrNewer;
 	}
