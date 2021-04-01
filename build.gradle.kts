@@ -3,6 +3,7 @@ version = "$version"
 
 plugins {
     id("java-gradle-plugin")
+    id("groovy")
     id("com.gradle.plugin-publish").version("0.12.0")
     id ("maven-publish")
 }
@@ -10,12 +11,15 @@ plugins {
 repositories {
     mavenCentral()
 }
-
 dependencies {
     implementation("de.undercouch:gradle-download-task:4.0.2")
     implementation("com.jayway.jsonpath:json-path:2.4.0")
     implementation("org.yaml:snakeyaml:1.20")
     implementation("commons-io:commons-io:2.6")
+    testImplementation("org.spockframework:spock-core:1.3-groovy-2.5") {
+        exclude(module = "groovy-all")
+    }
+    testImplementation("com.github.tomakehurst:wiremock-jre8:2.27.2")
 }
 gradlePlugin {
     plugins {

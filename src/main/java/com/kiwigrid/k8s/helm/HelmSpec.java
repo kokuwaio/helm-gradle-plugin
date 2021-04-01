@@ -22,12 +22,12 @@ public interface HelmSpec {
 	void setHelmHomeDirectory(File helmHomeDirectory);
 	File getHelmHomeDirectory();
 
-	static void copy(HelmSpec from, HelmSpec to) {
-		to.setHelmExecutableDirectory(from.getHelmExecutableDirectory());
-		to.setOutputDirectory(from.getOutputDirectory());
-		to.setVersion(from.getVersion());
-		to.setArchitecture(from.getArchitecture());
-		to.setHelmDownloadUrl(from.getHelmDownloadUrl());
-		to.setHelmHomeDirectory(from.getHelmHomeDirectory());
+	default void copyFrom(HelmSpec other) {
+		this.setHelmExecutableDirectory(other.getHelmExecutableDirectory());
+		this.setOutputDirectory(other.getOutputDirectory());
+		this.setVersion(other.getVersion());
+		this.setArchitecture(other.getArchitecture());
+		this.setHelmDownloadUrl(other.getHelmDownloadUrl());
+		this.setHelmHomeDirectory(other.getHelmHomeDirectory());
 	}
 }

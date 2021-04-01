@@ -241,7 +241,7 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 						.append("\" />");
 				failures.add(new AssertionError("Test '"
 						+ helmTestCase.title
-						+ " requires file  "
+						+ "' requires file  "
 						+ input.getAbsolutePath()
 						+ " which does not exist or is no file."));
 				return;

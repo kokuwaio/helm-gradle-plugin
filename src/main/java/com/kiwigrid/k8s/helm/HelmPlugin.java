@@ -8,11 +8,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.stream.Collectors;
 
-import com.kiwigrid.k8s.helm.tasks.HelmDeployTask;
 import com.kiwigrid.k8s.helm.tasks.HelmBuildTask;
+import com.kiwigrid.k8s.helm.tasks.HelmDeployTask;
 import com.kiwigrid.k8s.helm.tasks.HelmInitTask;
+import com.kiwigrid.k8s.helm.tasks.HelmRepoSyncTask;
 import com.kiwigrid.k8s.helm.tasks.HelmTestTask;
-import com.kiwigrid.k8s.helm.tasks.RepoSyncTask;
 import de.undercouch.gradle.tasks.download.Download;
 import org.gradle.api.Action;
 import org.gradle.api.Plugin;
@@ -103,17 +103,17 @@ public class HelmPlugin implements Plugin<Project> {
 				HelmInitTask.class,
 				helmInitTask -> {
 					helmInitTask.dependsOn(downloadHelm);
-					HelmSpec.copy(extension, helmInitTask);
+					helmInitTask.copyFrom(extension);
 				}
 		);
 
-		TaskProvider<RepoSyncTask> helmRepoSync = projectTasks.register(
+		TaskProvider<HelmRepoSyncTask> helmRepoSync = projectTasks.register(
 				"helmRepoSync",
-				RepoSyncTask.class,
-				repoSyncTask -> {
-					repoSyncTask.dependsOn(helmInit);
-					repoSyncTask.setRepositories(extension.getRepositories());
-					HelmSpec.copy(extension, repoSyncTask);
+				HelmRepoSyncTask.class,
+				helmRepoSyncTask -> {
+					helmRepoSyncTask.dependsOn(helmInit);
+					helmRepoSyncTask.setRepositories(extension.getRepositories());
+					helmRepoSyncTask.copyFrom(extension);
 				}
 		);
 
@@ -123,19 +123,27 @@ public class HelmPlugin implements Plugin<Project> {
 				helmBuildTask -> {
 					helmBuildTask.dependsOn(helmRepoSync);
 					helmBuildTask.setExpansions(extension.getExpansions());
-					HelmSpec.copy(extension, helmBuildTask);
+					helmBuildTask.copyFrom(extension);
 				});
 		projectTasks.named(BasePlugin.ASSEMBLE_TASK_NAME, task -> task.dependsOn(helmChartBuild));
-		TaskProvider<HelmTestTask> helmChartTest = projectTasks.register("helmChartTest", HelmTestTask.class, helmTestTask -> {
-			helmTestTask.dependsOn(helmChartBuild);
-			HelmSpec.copy(extension, helmTestTask);
-		});
+		TaskProvider<HelmTestTask> helmChartTest = projectTasks.register(
+				"helmChartTest",
+				HelmTestTask.class,
+				helmTestTask -> {
+					helmTestTask.dependsOn(helmChartBuild);
+					helmTestTask.copyFrom(extension);
+				});
 		projectTasks.named(LifecycleBasePlugin.CHECK_TASK_NAME, task -> task.dependsOn(helmChartTest));
 
-		TaskProvider<HelmDeployTask> helmDeploy = projectTasks.register("helmDeploy", HelmDeployTask.class, helmDeployTask -> {
-			helmDeployTask.onlyIf(element -> extension.getDeployTo() != null);
-			helmDeployTask.dependsOn(helmChartTest);
-		});
+		TaskProvider<HelmDeployTask> helmDeploy = projectTasks.register(
+				"helmDeploy",
+				HelmDeployTask.class,
+				helmDeployTask -> {
+					helmDeployTask.onlyIf(element -> extension.getDeployTo() != null);
+					helmDeployTask.setTarget(extension.getDeployTo());
+					helmDeployTask.dependsOn(helmChartTest);
+					helmDeployTask.copyFrom(extension);
+				});
 		projectTasks.named(BasePlugin.UPLOAD_ARCHIVES_TASK_NAME, task -> task.dependsOn(helmDeploy));
 	}
 
@@ -215,10 +223,10 @@ public class HelmPlugin implements Plugin<Project> {
 
 	public static HelmExecResult helmExec(Project project, HelmSpec helmSpec, Object... args) {
 		Logger logger = project.getLogger();
-		if(logger.isDebugEnabled()) {
+		if (logger.isDebugEnabled()) {
 			String command = Arrays.stream(args)
-				                   .map(Object::toString)
-				                   .collect(Collectors.joining(" "));
+					.map(Object::toString)
+					.collect(Collectors.joining(" "));
 			logger.debug("Executing : helm " + command);
 		}
 		ByteArrayOutputStream outStream = new ByteArrayOutputStream();
@@ -229,7 +237,7 @@ public class HelmPlugin implements Plugin<Project> {
 			execSpec.setIgnoreExitValue(true);
 		});
 		String[] lines = outStream.toString().split("\n");
-		if(logger.isDebugEnabled()){
+		if (logger.isDebugEnabled()) {
 			logger.debug("Result of previous command : \n" + String.join("\n", lines));
 		}
 		return new HelmExecResult(execResult, lines);
