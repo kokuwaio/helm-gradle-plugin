@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.AbstractMap;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -84,8 +85,14 @@ public class HelmBuildTask extends AbstractHelmTask {
 			};
 		}
 
-		HelmPlugin.helmExecSuccess(getProject(), this, arguments);
-		getLogger().lifecycle("packaged chart to : " + getOutputDirectory().getAbsolutePath());
+		String helmPackage = Stream.concat(
+				Stream.of("helm"),
+				Arrays.stream(arguments).map(Object::toString)).collect(Collectors.joining(" ", "'", "'")
+		);
+		getLogger().lifecycle("will issue : " + helmPackage);
+
+		String [] result = HelmPlugin.helmExecSuccess(getProject(), this, arguments);
+		getLogger().lifecycle(String.join(" ", result));
 	}
 
 	private void helmDependencyBuild(File chartFolder) {
