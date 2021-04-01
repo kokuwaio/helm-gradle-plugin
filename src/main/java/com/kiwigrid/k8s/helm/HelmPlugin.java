@@ -135,6 +135,7 @@ public class HelmPlugin implements Plugin<Project> {
 		TaskProvider<HelmDeployTask> helmDeploy = projectTasks.register("helmDeploy", HelmDeployTask.class, helmDeployTask -> {
 			helmDeployTask.onlyIf(element -> extension.getDeployTo() != null);
 			helmDeployTask.dependsOn(helmChartTest);
+			HelmSpec.copy(extension, helmDeployTask);
 		});
 		projectTasks.named(BasePlugin.UPLOAD_ARCHIVES_TASK_NAME, task -> task.dependsOn(helmDeploy));
 	}
