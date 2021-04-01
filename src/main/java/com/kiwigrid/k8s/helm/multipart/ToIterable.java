@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 /**
  * @author wind57
  *
- * Transform a List of {@link MultipartToken} to an Iterable<byte[]>.
+ * Transform a List of {@link MultipartToken} to an Iterable of byte[].
  * This is needed for the http client
  */
 public final class ToIterable {
