@@ -34,10 +34,11 @@ public class HelmInitTask extends AbstractHelmTask {
 
 	private boolean notNewerThan30(Task task) {
 		String version = getVersion();
-		logger.debug("found version : " + version + " of helm");
 		boolean is30OrNewer = HelmPlugin.isVersion3OrNewer(version);
 		if(is30OrNewer) {
-			logger.debug("version : " + version + " is higher than 3.0. This operation is a NO-OP");
+			logger.lifecycle("version : " + version + " is higher than 3.0. 'HelmInitTask' is a NO-OP");
+		} else {
+			logger.lifecycle("will issue : './helm init --client-only' in : " + getHelmHomeDirectory());
 		}
 		return !is30OrNewer;
 	}
