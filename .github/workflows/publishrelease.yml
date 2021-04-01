@@ -13,7 +13,7 @@ jobs:
       - id: get-version
         uses: actions/github-script@0.9.0
         with:
-          script: return context.ref.substr(1)
+          script: return context.ref.substr(11)
           result-encoding: string
       - uses: actions/checkout@v2
       - name: Set up JDK 1.8
