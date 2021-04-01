@@ -1,11 +1,8 @@
 package com.kiwigrid.k8s.helm;
 
 import java.io.Serializable;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Objects;
 
-import org.gradle.api.Action;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Nested;
 

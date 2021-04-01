@@ -13,6 +13,7 @@ import com.kiwigrid.k8s.helm.HelmPlugin;
 import javax.inject.Inject;
 import org.apache.tools.ant.filters.ReplaceTokens;
 import org.gradle.api.Project;
+import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.provider.MapProperty;
@@ -27,7 +28,8 @@ public class HelmBuildTask extends AbstractHelmTask {
 
 	private Property<File> source;
 
-	private MapProperty<String, Object> expansions;
+	private final MapProperty<String, Object> expansions;
+	private final Logger logger;
 
 	@Inject
 	public HelmBuildTask(ObjectFactory objectFactory) {
@@ -36,15 +38,20 @@ public class HelmBuildTask extends AbstractHelmTask {
 		expansions = objectFactory.mapProperty(String.class, Object.class);
 		setGroup(BasePlugin.BUILD_GROUP);
 		setDescription("Builds a Helm Chart");
+		logger = getLogger();
 	}
 
 	@TaskAction
 	public void helmBuild() throws FileNotFoundException {
 		File temporaryDir = renderExpansions();
+		logger.lifecycle("Rendered helm chart with expansions into {}", temporaryDir);
 		String chartName = readChartName(temporaryDir);
+		logger.lifecycle("Read chart name to be {}", chartName);
 		File chartFolder = new File(getOutputDirectory(), chartName);
 		cleanCopyChart(temporaryDir, chartFolder);
+		logger.lifecycle("Created chart in {}, running dependency build for {}", chartFolder);
 		helmDependencyBuild(chartFolder);
+		logger.lifecycle("Running helm package for {}", chartFolder);
 		helmPackage(chartFolder);
 	}
 
@@ -59,7 +66,12 @@ public class HelmBuildTask extends AbstractHelmTask {
 	@InputDirectory
 	@Override
 	public File getHelmHomeDirectory() {
-		return super.getHelmHomeDirectory();
+		File helmHomeDirectory = super.getHelmHomeDirectory();
+		// an input directory needs to exist otherwise gradle fails with an error.
+		if (!helmHomeDirectory.exists()) {
+			helmHomeDirectory.mkdirs();
+		}
+		return helmHomeDirectory;
 	}
 
 	private void helmPackage(File chartFolder) {

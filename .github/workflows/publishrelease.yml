@@ -10,37 +10,50 @@ jobs:
     name: release
     runs-on: ubuntu-latest
     steps:
-    - id: get-version
-      uses: actions/github-script@0.9.0
-      with:
-        script: return context.ref.substr(1)
-        result-encoding: string
-    - uses: actions/checkout@v2
-    - name: Set up JDK 1.8
-      uses: actions/setup-java@v1
-      with:
-        java-version: 1.8
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-    - name: Build with Gradle
-      env:
-        GRADLE_KEY: ${{ secrets.GRADLE_PLUGIN_PORTAL_KEY }}
-        GRADLE_SECRET:  ${{ secrets.GRADLE_PLUGIN_PORTAL_SECRET }}
-      run: ./gradlew publishPlugins -Pgradle.publish.key=$GRADLE_KEY -Pgradle.publish.secret=$GRADLE_SECRET -Pversion=${{steps.get-version.outputs.result}}
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        body: |
-          Get the release from [Gradle Plugin Portal](https://plugins.gradle.org/plugin/com.kiwigrid.helm/${{steps.get-version.outputs.result}}) or by using this snippet in your build file:
-          ```groovy
-          plugins {
-            id "com.kiwigrid.helm" version "${{steps.get-version.outputs.result}}"
-          }
-          ```
-        draft: false
-        prerelease: false
+      - id: get-version
+        uses: actions/github-script@0.9.0
+        with:
+          script: return context.ref.substr(1)
+          result-encoding: string
+      - uses: actions/checkout@v2
+      - name: Set up JDK 1.8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      - name: Build with Gradle
+        env:
+          GRADLE_KEY: ${{ secrets.GRADLE_PLUGIN_PORTAL_KEY }}
+          GRADLE_SECRET: ${{ secrets.GRADLE_PLUGIN_PORTAL_SECRET }}
+        run: ./gradlew check publishPlugins -Pgradle.publish.key=$GRADLE_KEY -Pgradle.publish.secret=$GRADLE_SECRET -Pversion=${{steps.get-version.outputs.result}}
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v2
+        with:
+          report_paths: '**/build/test-results/test/TEST-*.xml'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: "Build Changelog"
+        id: build_changelog
+        uses: mikepenz/release-changelog-builder-action@v1.7.1
+        with:
+          configuration: ".github/workflows/release-notes-config.json"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            Get the release from [Gradle Plugin Portal](https://plugins.gradle.org/plugin/com.kiwigrid.helm/${{steps.get-version.outputs.result}}) or by using this snippet in your build file:
+            ```groovy
+            plugins {
+              id "com.kiwigrid.helm" version "${{steps.get-version.outputs.result}}"
+            }
+            ```
+            ${{steps.build_changelog.outputs.changelog}}
+          draft: false
+          prerelease: false

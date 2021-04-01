@@ -11,11 +11,9 @@ import java.util.Base64;
 
 import com.kiwigrid.k8s.helm.HelmRepository;
 import org.apache.commons.io.IOUtils;
-import org.gradle.api.DefaultTask;
 import org.gradle.api.file.ConfigurableFileTree;
 import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.TaskAction;
 
 /**
@@ -23,11 +21,9 @@ import org.gradle.api.tasks.TaskAction;
  *
  * @author Jörg Eichhorn {@literal <joerg.eichhorn@kiwigrid.com>}
  */
-public class HelmDeployTask extends DefaultTask {
+public class HelmDeployTask extends AbstractHelmTask {
 
 	private HelmRepository target;
-
-	private File chartFolder;
 
 	public HelmDeployTask() {
 		setGroup(BasePlugin.UPLOAD_GROUP);
@@ -36,7 +32,7 @@ public class HelmDeployTask extends DefaultTask {
 
 	@TaskAction
 	public void deploy() throws IOException {
-		ConfigurableFileTree chartFiles = getProject().fileTree(chartFolder);
+		ConfigurableFileTree chartFiles = getProject().fileTree(getOutputDirectory());
 		chartFiles.include("*.tgz");
 		if (target == null || target.getDeploySpec() == null || target.getDeploySpec().getUploadUrl() == null) {
 			throw new IllegalArgumentException("Missing target upload info");
@@ -44,16 +40,6 @@ public class HelmDeployTask extends DefaultTask {
 		for (File chartFile : chartFiles) {
 			uploadSingle(chartFile);
 		}
-	}
-
-	@InputDirectory
-	public File getChartFolder() {
-		return chartFolder;
-	}
-
-	public HelmDeployTask setChartFolder(File chartFolder) {
-		this.chartFolder = chartFolder;
-		return this;
 	}
 
 	@Input
@@ -114,7 +100,10 @@ public class HelmDeployTask extends DefaultTask {
 	private static String getResponseMessage(HttpURLConnection connection) throws IOException {
 		InputStream errorStream = connection.getErrorStream();
 		if (errorStream != null) {
-			return "Code " + connection.getResponseCode() + " - " + IOUtils.toString(errorStream, " UTF - 8 ");
+			return "Code "
+					+ connection.getResponseCode()
+					+ " - "
+					+ IOUtils.toString(errorStream, StandardCharsets.UTF_8);
 		} else {
 			return "Code " + connection.getResponseCode();
 		}
