@@ -89,7 +89,7 @@ public class HelmBuildTask extends AbstractHelmTask {
 				Stream.of("helm"),
 				Arrays.stream(arguments).map(Object::toString)).collect(Collectors.joining(" ", "'", "'")
 		);
-		getLogger().lifecycle("will issue : " + helmPackage);
+		getLogger().lifecycle("will issue : {}",  helmPackage);
 
 		String [] result = HelmPlugin.helmExecSuccess(getProject(), this, arguments);
 		getLogger().lifecycle(String.join(" ", result));
