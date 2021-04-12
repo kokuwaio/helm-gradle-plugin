@@ -20,7 +20,6 @@ dependencies {
         exclude(module = "groovy-all")
     }
     testImplementation("com.github.tomakehurst:wiremock-jre8:2.27.2")
-    // https://mvnrepository.com/artifact/org.spockframework/spock-junit4
     testImplementation ("org.spockframework:spock-junit4:2.0-M5-groovy-3.0")
 
 }
