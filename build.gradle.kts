@@ -16,7 +16,7 @@ dependencies {
     implementation("com.jayway.jsonpath:json-path:2.4.0")
     implementation("org.yaml:snakeyaml:1.20")
     implementation("commons-io:commons-io:2.6")
-    implementation("org.spockframework:spock-core:2.0-M5-groovy-3.0") {
+    testImplementation("org.spockframework:spock-core:2.0-M5-groovy-3.0") {
         exclude(module = "groovy-all")
     }
     testImplementation("com.github.tomakehurst:wiremock-jre8:2.27.2")
