@@ -20,7 +20,7 @@ class TestProjects {
                 }
                 expansions = [
                     helm: [
-                        chartProjectName: project.name, 
+                        chartProjectName: project.name,
                         chartVersion: project.version
                     ]
                 ]
@@ -29,7 +29,7 @@ class TestProjects {
         """.stripIndent()
 		testProjectDir.newFile("src/main/helm/Chart.yaml") << """\
             apiVersion: v1
-            description: A simple good working helm chart 
+            description: A simple good working helm chart
             name: \${helm.chartProjectName}
             version: \${helm.chartVersion}
         """.stripIndent()

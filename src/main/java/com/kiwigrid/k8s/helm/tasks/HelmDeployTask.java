@@ -26,7 +26,6 @@ public class HelmDeployTask extends AbstractHelmTask {
 	private HelmRepository target;
 
 	public HelmDeployTask() {
-		setGroup(BasePlugin.UPLOAD_GROUP);
 		setDescription("Uploads Helm chart to a helm repository");
 	}
 
