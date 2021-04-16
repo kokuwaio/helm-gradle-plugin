@@ -32,6 +32,8 @@ jobs:
         with:
           report_paths: '**/build/test-results/test/TEST-*.xml'
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          require_tests: true
+          fail_on_failure: true
       - name: "Build Changelog"
         id: build_changelog
         uses: mikepenz/release-changelog-builder-action@v1.7.1
