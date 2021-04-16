@@ -44,16 +44,8 @@ Tested with Gradle 6
 
 Changelog
 ---
-v1.5.0
-* initial support for helm 3
-* defaulting to Helm v2.17.0 because of fixed default repo URLs
-* initial support for junit compatible xml test reports
 
-v1.4.0
-* fixes default helm download url
-
-v1.3.0
-* initial open source version
+[See releases](https://github.com/kiwigrid/helm-gradle-plugin/releases).
 
 Usage
 ---
@@ -61,7 +53,7 @@ Usage
 ### Activate
 ```groovy
 plugins {
-    id 'com.kiwigrid.helm' version '1.5.0'
+    id 'com.kiwigrid.helm' version '1.5.1'
 }
 ```
 
