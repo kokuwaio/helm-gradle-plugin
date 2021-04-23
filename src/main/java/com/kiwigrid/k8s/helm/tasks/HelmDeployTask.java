@@ -73,9 +73,6 @@ public class HelmDeployTask extends AbstractHelmTask {
 						.encode(authString.getBytes(StandardCharsets.UTF_8)), StandardCharsets.US_ASCII);
 				connection.setRequestProperty("Authorization", authHeaderValue);
 			}
-
-
-
 			connection.setDoOutput(true);
 			connection.setRequestMethod(target.getDeploySpec().getMethod().name());
 			connection.setRequestProperty("Content-Type", "application/gzip");
