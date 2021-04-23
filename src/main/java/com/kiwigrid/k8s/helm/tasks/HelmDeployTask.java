@@ -63,12 +63,19 @@ public class HelmDeployTask extends AbstractHelmTask {
 		HttpURLConnection connection = (HttpURLConnection) new URL(uploadUrl).openConnection();
 
 		try {
-			if (target.isAuthenticated()) {
+			// first check the Api Key, because if this is provided, we do not need
+			// username/password when deploying
+			if(target.isApiKeyProvided()) {
+				connection.setRequestProperty("X-JFrog-Art-Api", target.getApiKey());
+			} else if (target.isAuthenticated()) {
 				String authString = target.getUser() + ":" + target.getPassword();
 				String authHeaderValue = "Basic " + new String(Base64.getEncoder()
 						.encode(authString.getBytes(StandardCharsets.UTF_8)), StandardCharsets.US_ASCII);
 				connection.setRequestProperty("Authorization", authHeaderValue);
 			}
+
+
+
 			connection.setDoOutput(true);
 			connection.setRequestMethod(target.getDeploySpec().getMethod().name());
 			connection.setRequestProperty("Content-Type", "application/gzip");

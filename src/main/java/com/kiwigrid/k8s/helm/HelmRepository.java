@@ -7,6 +7,7 @@ import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Nested;
 
 public class HelmRepository implements Serializable {
+
 	private final String name;
 
 	private String url;
@@ -16,6 +17,9 @@ public class HelmRepository implements Serializable {
 	private String user;
 
 	private String password;
+
+	// X-JFrog-Art-Api from artifactory
+	private String apiKey;
 
 	public HelmRepository(String name) {
 		this.name = name;
@@ -28,6 +32,10 @@ public class HelmRepository implements Serializable {
 
 	public boolean isAuthenticated() {
 		return password != null || user != null;
+	}
+
+	public boolean isApiKeyProvided() {
+		return apiKey != null;
 	}
 
 	public DeployDsl deployVia(DeploymentSpec.HttpMethod httpMethod) {
@@ -61,12 +69,23 @@ public class HelmRepository implements Serializable {
 				Objects.equals(url, that.url) &&
 				Objects.equals(deploySpec, that.deploySpec) &&
 				Objects.equals(user, that.user) &&
-				Objects.equals(password, that.password);
+				Objects.equals(password, that.password) &&
+				Objects.equals(apiKey, that.apiKey);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(name, url, deploySpec, user, password);
+		return Objects.hash(name, url, deploySpec, user, password, apiKey);
+	}
+
+	@Input
+	public String getApiKey() {
+		return apiKey;
+	}
+
+	public HelmRepository apiKey(String apiKey) {
+		this.apiKey = apiKey;
+		return this;
 	}
 
 	@Input
