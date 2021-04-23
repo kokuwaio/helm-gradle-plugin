@@ -50,3 +50,8 @@ pluginBundle {
         }
     }
 }
+
+tasks.withType<Test>().configureEach {
+    // Using JUnitPlatform for running tests
+    useJUnitPlatform()
+}
