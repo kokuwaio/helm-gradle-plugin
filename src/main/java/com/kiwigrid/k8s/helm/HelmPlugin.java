@@ -144,7 +144,6 @@ public class HelmPlugin implements Plugin<Project> {
 					helmDeployTask.dependsOn(helmChartTest);
 					helmDeployTask.copyFrom(extension);
 				});
-		projectTasks.named(BasePlugin.UPLOAD_ARCHIVES_TASK_NAME, task -> task.dependsOn(helmDeploy));
 	}
 
 	private Action<Download> createDownloadConfigurer(Project project, HelmSpec helmSpec) {
