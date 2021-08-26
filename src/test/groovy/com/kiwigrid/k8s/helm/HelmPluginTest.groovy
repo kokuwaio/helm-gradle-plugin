@@ -65,7 +65,7 @@ class HelmPluginTest extends Specification {
 				buildFile,
 				helmVersion,
 				wireMockRule.baseUrl(),
-				deployMethod)
+				deployMethod, "src/main/helm", "src/test/helm")
 		TestHelmRepositories.emptyHelmRepoAcceptingPostOrPut(wireMockRule, deployMethod)
 
 		when:
@@ -86,5 +86,30 @@ class HelmPluginTest extends Specification {
 
 		where:
 		[helmVersion, deployMethod] << [["2.17.0", "3.0.0"], [ "PUT", "POST" ]].combinations()
+	}
+
+	def "simple chart can be build and tested with helm #helmVersion and source for charts and sources for tests are custom"() {
+		given:
+		TestProjects.createChartProjectWithCustomPaths(
+				testProjectDir,
+				buildFile,
+				helmVersion
+		)
+
+		when:
+		def result = GradleRunner.create()
+				.withProjectDir(testProjectDir.root)
+				.withPluginClasspath()
+				.withArguments(":helmChartBuild", ":helmChartTest", "--info", "--stacktrace")
+				.build()
+
+		then:
+		result.task(":helmChartBuild").outcome == SUCCESS
+		result.task(":helmChartTest").outcome == SUCCESS
+		new File(testProjectDir.root, "/build/helm/repo/${PROJECT_NAME}-1.0.0.tgz").exists()
+		new File(testProjectDir.root, "/build/helm/test/helm-junit-report.xml").exists()
+
+		where:
+		helmVersion << ["2.17.0", "3.0.0"]
 	}
 }

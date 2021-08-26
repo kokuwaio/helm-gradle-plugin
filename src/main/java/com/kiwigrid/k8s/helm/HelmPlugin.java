@@ -1,9 +1,6 @@
 package com.kiwigrid.k8s.helm;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.io.*;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.stream.Collectors;
@@ -228,18 +225,22 @@ public class HelmPlugin implements Plugin<Project> {
 					.collect(Collectors.joining(" "));
 			logger.debug("Executing : helm " + command);
 		}
-		ByteArrayOutputStream outStream = new ByteArrayOutputStream();
-		ExecResult execResult = project.exec(execSpec -> {
-			configureFromExtension(helmSpec, args).execute(execSpec);
-			execSpec.setStandardOutput(outStream);
-			execSpec.setErrorOutput(outStream);
-			execSpec.setIgnoreExitValue(true);
-		});
-		String[] lines = outStream.toString().split("\n");
-		if (logger.isDebugEnabled()) {
-			logger.debug("Result of previous command : \n" + String.join("\n", lines));
+
+		try (ByteArrayOutputStream outStream = new ByteArrayOutputStream()) {
+			ExecResult execResult = project.exec(execSpec -> {
+				configureFromExtension(helmSpec, args).execute(execSpec);
+				execSpec.setStandardOutput(outStream);
+				execSpec.setErrorOutput(outStream);
+				execSpec.setIgnoreExitValue(true);
+			});
+			String[] lines = outStream.toString().split("\n");
+			if (logger.isDebugEnabled()) {
+				logger.debug("Result of previous command : \n" + String.join("\n", lines));
+			}
+			return new HelmExecResult(execResult, lines);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
 		}
-		return new HelmExecResult(execResult, lines);
 	}
 
 	public static class HelmExecResult {
@@ -269,9 +270,9 @@ public class HelmPlugin implements Plugin<Project> {
 	}
 
 	public static Object loadYamlSilently(File yamlFile, boolean emptyObjectInsteadOfRuntimeExceptions) {
-		try {
-			return YAML.load(new FileInputStream(yamlFile));
-		} catch (FileNotFoundException e) {
+		try (InputStream inputStream = new FileInputStream(yamlFile)) {
+			return YAML.load(inputStream);
+		} catch (IOException e) {
 			if (emptyObjectInsteadOfRuntimeExceptions) {
 				return new Object();
 			}
@@ -285,9 +286,9 @@ public class HelmPlugin implements Plugin<Project> {
 	}
 
 	public static Iterable<Object> loadYamlsSilently(File yamlFile, boolean emptySetInsteadOfRuntimeExceptions) {
-		try {
-			return YAML.loadAll(new FileInputStream(yamlFile));
-		} catch (FileNotFoundException e) {
+		try (FileInputStream inputStream = new FileInputStream(yamlFile)) {
+			return YAML.loadAll(inputStream);
+		} catch (IOException e) {
 			if (emptySetInsteadOfRuntimeExceptions) {
 				return Collections.emptySet();
 			}

@@ -3,6 +3,7 @@ package com.kiwigrid.k8s.helm.tasks;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -192,8 +193,14 @@ public class HelmBuildTask extends AbstractHelmTask {
 	}
 
 	private static String readChartName(File chartDir) throws FileNotFoundException {
-		Map contents = HelmPlugin.YAML.load(new FileInputStream(new File(chartDir, "Chart.yaml")));
-		return (String) contents.get("name");
+		try (FileInputStream inputStream = new FileInputStream(new File(chartDir, "Chart.yaml"))) {
+			Map contents = HelmPlugin.YAML.load(inputStream);
+			return (String) contents.get("name");
+		} catch (FileNotFoundException e) {
+			throw e;
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 }

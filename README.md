@@ -95,6 +95,16 @@ helm {
     // this will upload the chart to the respective repo using the appropriate deploy spec
     deployTo repositories.myHelmRepoName
 }
+
+helmChartBuild() {
+    //this will override helm charts source directory
+    source = file(project.projectDir.getAbsolutePath() + "/helm") 
+}
+
+helmChartTest() {
+    //this will override helm charts test source directory
+    tests = project.getLayout().getProjectDirectory().dir('/helm/test')
+}
 ```
 
 ### Author chart
