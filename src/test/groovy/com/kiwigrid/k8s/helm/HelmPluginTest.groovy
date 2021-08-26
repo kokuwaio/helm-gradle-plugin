@@ -65,7 +65,7 @@ class HelmPluginTest extends Specification {
 				buildFile,
 				helmVersion,
 				wireMockRule.baseUrl(),
-				deployMethod, "src/main/helm", "src/test/helm")
+				deployMethod)
 		TestHelmRepositories.emptyHelmRepoAcceptingPostOrPut(wireMockRule, deployMethod)
 
 		when:

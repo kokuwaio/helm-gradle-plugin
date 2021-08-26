@@ -1,9 +1,9 @@
 package com.kiwigrid.k8s.helm;
 
 import java.io.*;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import com.kiwigrid.k8s.helm.tasks.HelmBuildTask;
 import com.kiwigrid.k8s.helm.tasks.HelmDeployTask;
@@ -265,7 +265,7 @@ public class HelmPlugin implements Plugin<Project> {
 		return loadYamlSilently(yamlFile, false);
 	}
 
-	public static Iterable<Object> loadYamlsSilently(File yamlFile) {
+	public static List<Object> loadYamlsSilently(File yamlFile) {
 		return loadYamlsSilently(yamlFile, false);
 	}
 
@@ -285,17 +285,19 @@ public class HelmPlugin implements Plugin<Project> {
 		}
 	}
 
-	public static Iterable<Object> loadYamlsSilently(File yamlFile, boolean emptySetInsteadOfRuntimeExceptions) {
-		try (FileInputStream inputStream = new FileInputStream(yamlFile)) {
-			return YAML.loadAll(inputStream);
+	public static List<Object> loadYamlsSilently(File yamlFile, boolean emptySetInsteadOfRuntimeExceptions) {
+		try (FileInputStream yaml = new FileInputStream(yamlFile);) {
+			return StreamSupport.stream(YAML.loadAll(yaml).spliterator(), false)
+					.filter(Objects::nonNull)
+					.collect(Collectors.toList());
 		} catch (IOException e) {
 			if (emptySetInsteadOfRuntimeExceptions) {
-				return Collections.emptySet();
+				return Collections.emptyList();
 			}
 			throw new RuntimeException(e);
 		} catch (YAMLException parsingError) {
 			if (emptySetInsteadOfRuntimeExceptions) {
-				return Collections.emptySet();
+				return Collections.emptyList();
 			}
 			throw parsingError;
 		}

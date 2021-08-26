@@ -442,9 +442,7 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 		String path = (String) test.get("path");
 		Object expectedValue = test.get("value");
 		return new HelmTestAssertion(fileName, file -> {
-			List<Object> documents = StreamSupport.stream(HelmPlugin.loadYamlsSilently(file).spliterator(), false)
-					.filter(Objects::nonNull)
-					.collect(Collectors.toList());
+			List<Object> documents = HelmPlugin.loadYamlsSilently(file);
 			getLogger().debug("Loaded {}: {}", file, documents);
 			Object fragment = JsonPath.read(documents, path);
 			if (!Objects.equals(fragment, expectedValue)) {
@@ -464,9 +462,7 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 		String pattern = (String) test.get("pattern");
 		Pattern compiledPattern = Pattern.compile(pattern);
 		return new HelmTestAssertion(fileName, file -> {
-			List<Object> documents = StreamSupport.stream(HelmPlugin.loadYamlsSilently(file).spliterator(), false)
-					.filter(Objects::nonNull)
-					.collect(Collectors.toList());
+			List<Object> documents = HelmPlugin.loadYamlsSilently(file);
 			getLogger().debug("Loaded {}: {}", file, documents);
 			Object fragment = JsonPath.read(documents, path);
 			String fragmentString = HelmPlugin.YAML.dump(fragment);
