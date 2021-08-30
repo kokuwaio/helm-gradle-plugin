@@ -1,9 +1,6 @@
 package com.kiwigrid.k8s.helm.tasks;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -24,7 +21,6 @@ import org.gradle.api.file.Directory;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
@@ -56,7 +52,7 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 	public HelmTestTask(ObjectFactory objectFactory) {
 		setDescription("Tests Helm Chart via \"helm lint\" and assert definitions");
 		setGroup(LifecycleBasePlugin.VERIFICATION_GROUP);
-		onlyIf(element -> tests.getOrElse(getTestSourceDir()).getAsFile().exists());
+		onlyIf(element -> tests.getAsFile().get().exists());
 		testOutputs = new File(getProject().getBuildDir(), "helm/test");
 		tests = objectFactory.directoryProperty();
 		tests.convention(getProject().provider(this::getTestSourceDir));
@@ -182,11 +178,12 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 						lintWithValuesSupported,
 						templateWithOutputSupported,
 						chartFolder,
+						chartTestOutputFolder,
 						junitReport,
 						failures));
 	}
 
-	private void runSingleTestCase(HelmTestCase helmTestCase, boolean lintWithValuesSupported, boolean templateWithOutputSupported, File chartFolder, StringBuilder junitReport, List<AssertionError> failures) {
+	private void runSingleTestCase(HelmTestCase helmTestCase, boolean lintWithValuesSupported, boolean templateWithOutputSupported, File chartFolder, File chartTestOutputFolder, StringBuilder junitReport, List<AssertionError> failures) {
 		getLogger().info("Running test case {}: {}", helmTestCase.name, helmTestCase.title);
 		junitReport
 				.append("<testcase name=\"")
@@ -310,6 +307,11 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 		return tests;
 	}
 
+	public HelmTestTask setTests(File tests) {
+		this.tests.set(tests);
+		return this;
+	}
+
 	public HelmTestTask setTests(Directory tests) {
 		this.tests.set(tests);
 		return this;
@@ -384,7 +386,7 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 				try {
 					return testCaseFromMap(createTestName(commonPathPrefix, yaml), test);
 				} catch (IOException e) {
-					throw new RuntimeException(e);
+					throw new UncheckedIOException(e);
 				}
 			} else {
 				return fromFile(commonPathPrefix, yaml);

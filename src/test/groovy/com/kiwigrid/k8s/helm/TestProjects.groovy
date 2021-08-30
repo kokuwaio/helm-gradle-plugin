@@ -121,7 +121,7 @@ class TestProjects {
 			}
 			
 			helmChartTest() {
-				tests = project.getLayout().getProjectDirectory().dir('differentSrc/test/helm')
+				tests = file(project.projectDir.getAbsolutePath() + '/differentSrc/test/helm')
 			}
         """.stripIndent()
 		testProjectDir.newFile("differentSrc/main/helm/Chart.yaml") << """\
@@ -194,6 +194,105 @@ class TestProjects {
             test: "eq"
             path: "[0]['spec']['template']['spec']['containers'][0]['resources']['requests']['cpu']"
             value: 1
+		""".stripIndent()
+	}
+
+	static def createChartProjectWithTwoDifferentCharts(TemporaryFolder testProjectDir, File buildFile, String helmVersion) {
+		testProjectDir.newFolder("src", "main", "helm")
+		testProjectDir.newFolder("src", "test", "helm")
+		testProjectDir.newFolder("src", "main", "helm", "templates")
+		testProjectDir.newFolder("src", "main", "helm2")
+		testProjectDir.newFolder("src", "test", "helm2")
+		testProjectDir.newFolder("src", "main", "helm2", "templates")
+		testProjectDir.newFolder("build")
+		buildFile << """\
+			import com.kiwigrid.k8s.helm.tasks.HelmBuildTask
+			import com.kiwigrid.k8s.helm.tasks.HelmTestTask
+
+            helm {
+                version "${helmVersion}"
+                expansions = [
+                    helm: [
+                        chartProjectName: project.name, 
+                        chartVersion: project.version
+                    ]
+                ]
+            }
+            
+            tasks.register("helmSecondChartBuild", HelmBuildTask.class) {
+			  dependsOn tasks.named("helmRepoSync")
+			  expansions = helm.expansions
+			  copyFrom helm
+
+			  // custom configuration
+			  source = file('src/main/helm2')
+			  outputDirectory = file("\$buildDir/helm/repo2")
+			}
+			
+			tasks.register("helmSecondChartTest", HelmTestTask.class) {
+			  dependsOn tasks.named("helmSecondChartBuild")
+			  copyFrom helm
+
+			  // custom configuration
+			  tests = file('src/test/helm2')
+			  outputDirectory = file("\$buildDir/helm/repo2")
+			}
+        """.stripIndent()
+		testProjectDir.newFile("src/main/helm/Chart.yaml") << """\
+            apiVersion: v1
+            description: A simple good working helm chart 
+            name: \${helm.chartProjectName}
+            version: \${helm.chartVersion}
+        """.stripIndent()
+		testProjectDir.newFile("src/main/helm2/Chart.yaml") << """\
+            apiVersion: v1
+            description: A simple good working helm chart 
+            name: \${helm.chartProjectName}2
+            version: \${helm.chartVersion}
+        """.stripIndent()
+
+		testProjectDir.newFile("src/main/helm/templates/deployment.yaml") << """\
+            kind: Deployment
+            apiVersion: extensions/v1beta1
+            metadata:
+              name: mydeployment
+            spec:
+              replicas: 1
+              template:
+                spec:
+                  containers:
+                  - name: {{ .Release.Name }}mydeploymentpodcontainer
+                    image: "test:test"
+        """.stripIndent()
+		testProjectDir.newFile("src/main/helm2/templates/deployment.yaml") << """\
+            kind: Deployment
+            apiVersion: extensions/v1beta1
+            metadata:
+              name: mydeployment2
+            spec:
+              replicas: 1
+              template:
+                spec:
+                  containers:
+                  - name: {{ .Release.Name }}mydeploymentpodcontainer
+                    image: "test:test"
+        """.stripIndent()
+
+		testProjectDir.newFile("src/test/helm/structtest.yaml") << """\
+        title: "Check name"
+        assert:
+          - file: templates/deployment.yaml
+            test: "eq"
+            path: "[0]['metadata']['name']"
+            value: mydeployment
+		""".stripIndent()
+		testProjectDir.newFile("src/test/helm2/structtest.yaml") << """\
+        title: "Check name"
+        assert:
+          - file: templates/deployment.yaml
+            test: "eq"
+            path: "[0]['metadata']['name']"
+            value: mydeployment2
 		""".stripIndent()
 	}
 }

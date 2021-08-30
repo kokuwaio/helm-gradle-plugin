@@ -14,6 +14,8 @@ import com.kiwigrid.k8s.helm.HelmPlugin;
 import javax.inject.Inject;
 import org.apache.tools.ant.filters.ReplaceTokens;
 import org.gradle.api.Project;
+import org.gradle.api.file.Directory;
+import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.plugins.BasePlugin;
@@ -27,23 +29,27 @@ import org.gradle.api.tasks.TaskAction;
 
 public class HelmBuildTask extends AbstractHelmTask {
 
-	private Property<File> source;
+	private DirectoryProperty source;
 
 	private final MapProperty<String, Object> expansions;
 	private final Logger logger;
 
 	@Inject
 	public HelmBuildTask(ObjectFactory objectFactory) {
-		source = objectFactory.property(File.class);
-		source.convention(getProject().provider(() -> getProject().file("src/main/helm")));
+		source = objectFactory.directoryProperty();
+		source.convention(getProject().provider(this::getSourceDir));
 		expansions = objectFactory.mapProperty(String.class, Object.class);
 		setGroup(BasePlugin.BUILD_GROUP);
 		setDescription("Builds a Helm Chart");
 		logger = getLogger();
 	}
 
+	private Directory getSourceDir() {
+		return getProject().getLayout().getProjectDirectory().dir("src/main/helm");
+	}
+
 	@TaskAction
-	public void helmBuild() throws FileNotFoundException {
+	public void helmBuild() throws IOException {
 		File temporaryDir = renderExpansions();
 		logger.lifecycle("Rendered helm chart with expansions into {}", temporaryDir);
 		String chartName = readChartName(temporaryDir);
@@ -143,7 +149,7 @@ public class HelmBuildTask extends AbstractHelmTask {
 	}
 
 	@InputDirectory
-	public Property<File> getSource() {
+	public DirectoryProperty getSource() {
 		return source;
 	}
 
@@ -152,7 +158,12 @@ public class HelmBuildTask extends AbstractHelmTask {
 		return this;
 	}
 
-	public HelmBuildTask setSource(Provider<File> source) {
+	public HelmBuildTask setSource(Directory source) {
+		this.source.set(source);
+		return this;
+	}
+
+	public HelmBuildTask setSource(Provider<Directory> source) {
 		this.source.set(source);
 		return this;
 	}
@@ -167,7 +178,7 @@ public class HelmBuildTask extends AbstractHelmTask {
 		return this;
 	}
 
-	public HelmBuildTask setExpansions(Map expansions) {
+	public HelmBuildTask setExpansions(Map<String, Object> expansions) {
 		this.expansions.set(expansions);
 		return this;
 	}
@@ -192,14 +203,10 @@ public class HelmBuildTask extends AbstractHelmTask {
 				.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 	}
 
-	private static String readChartName(File chartDir) throws FileNotFoundException {
+	private static String readChartName(File chartDir) throws IOException {
 		try (FileInputStream inputStream = new FileInputStream(new File(chartDir, "Chart.yaml"))) {
-			Map contents = HelmPlugin.YAML.load(inputStream);
+			Map<String, Object> contents = HelmPlugin.YAML.load(inputStream);
 			return (String) contents.get("name");
-		} catch (FileNotFoundException e) {
-			throw e;
-		} catch (IOException e) {
-			throw new RuntimeException(e);
 		}
 	}
 

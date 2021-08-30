@@ -225,22 +225,18 @@ public class HelmPlugin implements Plugin<Project> {
 					.collect(Collectors.joining(" "));
 			logger.debug("Executing : helm " + command);
 		}
-
-		try (ByteArrayOutputStream outStream = new ByteArrayOutputStream()) {
-			ExecResult execResult = project.exec(execSpec -> {
-				configureFromExtension(helmSpec, args).execute(execSpec);
-				execSpec.setStandardOutput(outStream);
-				execSpec.setErrorOutput(outStream);
-				execSpec.setIgnoreExitValue(true);
-			});
-			String[] lines = outStream.toString().split("\n");
-			if (logger.isDebugEnabled()) {
-				logger.debug("Result of previous command : \n" + String.join("\n", lines));
-			}
-			return new HelmExecResult(execResult, lines);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
+		ByteArrayOutputStream outStream = new ByteArrayOutputStream();
+		ExecResult execResult = project.exec(execSpec -> {
+			configureFromExtension(helmSpec, args).execute(execSpec);
+			execSpec.setStandardOutput(outStream);
+			execSpec.setErrorOutput(outStream);
+			execSpec.setIgnoreExitValue(true);
+		});
+		String[] lines = outStream.toString().split("\n");
+		if (logger.isDebugEnabled()) {
+			logger.debug("Result of previous command : \n" + String.join("\n", lines));
 		}
+		return new HelmExecResult(execResult, lines);
 	}
 
 	public static class HelmExecResult {
@@ -276,7 +272,7 @@ public class HelmPlugin implements Plugin<Project> {
 			if (emptyObjectInsteadOfRuntimeExceptions) {
 				return new Object();
 			}
-			throw new RuntimeException(e);
+			throw new UncheckedIOException(e);
 		} catch (YAMLException parsingError) {
 			if (emptyObjectInsteadOfRuntimeExceptions) {
 				return new Object();
@@ -294,7 +290,7 @@ public class HelmPlugin implements Plugin<Project> {
 			if (emptySetInsteadOfRuntimeExceptions) {
 				return Collections.emptyList();
 			}
-			throw new RuntimeException(e);
+			throw new UncheckedIOException(e);
 		} catch (YAMLException parsingError) {
 			if (emptySetInsteadOfRuntimeExceptions) {
 				return Collections.emptyList();
