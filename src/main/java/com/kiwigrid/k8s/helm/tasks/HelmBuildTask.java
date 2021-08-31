@@ -2,7 +2,6 @@ package com.kiwigrid.k8s.helm.tasks;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.LinkedHashMap;
@@ -20,7 +19,6 @@ import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.provider.MapProperty;
-import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
@@ -37,14 +35,14 @@ public class HelmBuildTask extends AbstractHelmTask {
 	@Inject
 	public HelmBuildTask(ObjectFactory objectFactory) {
 		source = objectFactory.directoryProperty();
-		source.convention(getProject().provider(this::getSourceDir));
+		source.convention(getProject().provider(this::getDefaultSourceDir));
 		expansions = objectFactory.mapProperty(String.class, Object.class);
 		setGroup(BasePlugin.BUILD_GROUP);
 		setDescription("Builds a Helm Chart");
 		logger = getLogger();
 	}
 
-	private Directory getSourceDir() {
+	private Directory getDefaultSourceDir() {
 		return getProject().getLayout().getProjectDirectory().dir("src/main/helm");
 	}
 

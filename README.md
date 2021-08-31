@@ -98,11 +98,13 @@ helm {
 
 helmChartBuild() {
     // source folder for the charts manifest files. just an example here, provide your own as needed
-    source = file(project.projectDir.getAbsolutePath() + "/helm") 
+    // defaults to file('/src/main/helm')
+    source = file(project.projectDir.getAbsolutePath() + '/helm') 
 }
 
 helmChartTest() {
     // source folder for the tests files. just an example here, provide your own as needed
+    // defaults to file('/src/test/helm')
     tests = file(project.projectDir.getAbsolutePath() + "/helm/test")
 }
 // Optional. You need to register new pair of tasks for each additional helm chart in your project
@@ -114,6 +116,7 @@ tasks.register("helmSecondChartBuild", HelmBuildTask.class) {
   
   // custom configuration
   // source folder for the charts manifest files. just an example here, provide your own as needed
+  // defaults to file('/src/main/helm')
   source = file('src/main/secondchart')
   // output folder for the compiled charts manifest files. just an example here, provide your own as needed
   outputDirectory = file("$buildDir/helm/repo2")
@@ -127,6 +130,7 @@ tasks.register("helmSecondChartTest", HelmBuildTask.class) {
   // source folder for the tests files. just an example here, provide your own as needed
   tests = file('src/test/secondchart')
   // output folder for the compiled charts manifest files. just an example here, provide your own as needed
+  // defaults to file('/src/test/helm')
   outputDirectory = file("$buildDir/helm/repo2")
 }
 ```

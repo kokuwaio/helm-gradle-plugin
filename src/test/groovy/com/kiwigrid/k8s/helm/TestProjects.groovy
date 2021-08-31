@@ -26,13 +26,13 @@ class TestProjects {
                 ]
                 deployTo repositories.mockrepo
             }
-        """.stripIndent()
+            """.stripIndent()
 		testProjectDir.newFile("src/main/helm/Chart.yaml") << """\
             apiVersion: v1
             description: A simple good working helm chart 
             name: \${helm.chartProjectName}
             version: \${helm.chartVersion}
-        """.stripIndent()
+            """.stripIndent()
 		testProjectDir.newFile("src/main/helm/templates/deployment.yaml") << """\
             kind: Deployment
             apiVersion: extensions/v1beta1
@@ -63,7 +63,7 @@ class TestProjects {
                         value: "kubernetes"
                   imagePullSecrets:
                     - name: {{ .Values.image.pullSecret | quote }}
-        """.stripIndent()
+            """.stripIndent()
 		testProjectDir.newFile("src/main/helm/values.yaml") << """\
             image:
               repository: example.com/\${helm.chartProjectName}
@@ -85,7 +85,7 @@ class TestProjects {
         resources:
           limits:
             cpu: 1
-		""".stripIndent()
+        """.stripIndent()
 		testProjectDir.newFile("src/test/helm/structtest.yaml") << """\
         title: "CPU requests should work"
         values:
@@ -97,15 +97,15 @@ class TestProjects {
             test: "eq"
             path: "[0]['spec']['template']['spec']['containers'][0]['resources']['requests']['cpu']"
             value: 1
-		""".stripIndent()
+        """.stripIndent()
 	}
 
 	static def createChartProjectWithCustomPaths(TemporaryFolder testProjectDir, File buildFile, String helmVersion) {
-		testProjectDir.newFolder("differentSrc", "main", "helm")
-		testProjectDir.newFolder("differentSrc", "test", "helm")
-		testProjectDir.newFolder("differentSrc", "main", "helm", "templates")
-		testProjectDir.newFolder("build")
-		buildFile << """\
+        testProjectDir.newFolder("differentSrc", "main", "helm")
+        testProjectDir.newFolder("differentSrc", "test", "helm")
+        testProjectDir.newFolder("differentSrc", "main", "helm", "templates")
+        testProjectDir.newFolder("build")
+        buildFile << """\
             helm {
                 version "${helmVersion}"
                 expansions = [
@@ -117,19 +117,19 @@ class TestProjects {
             }
             
             helmChartBuild() {
-				source = file(project.projectDir.getAbsolutePath() + '/differentSrc/main/helm')
-			}
-			
-			helmChartTest() {
-				tests = file(project.projectDir.getAbsolutePath() + '/differentSrc/test/helm')
-			}
-        """.stripIndent()
+                source = file(project.projectDir.getAbsolutePath() + '/differentSrc/main/helm')
+            }
+            
+            helmChartTest() {
+                tests = file(project.projectDir.getAbsolutePath() + '/differentSrc/test/helm')
+            }
+            """.stripIndent()
 		testProjectDir.newFile("differentSrc/main/helm/Chart.yaml") << """\
             apiVersion: v1
             description: A simple good working helm chart 
             name: \${helm.chartProjectName}
             version: \${helm.chartVersion}
-        """.stripIndent()
+            """.stripIndent()
 		testProjectDir.newFile("differentSrc/main/helm/templates/deployment.yaml") << """\
             kind: Deployment
             apiVersion: extensions/v1beta1
@@ -160,7 +160,7 @@ class TestProjects {
                         value: "kubernetes"
                   imagePullSecrets:
                     - name: {{ .Values.image.pullSecret | quote }}
-        """.stripIndent()
+            """.stripIndent()
 		testProjectDir.newFile("differentSrc/main/helm/values.yaml") << """\
             image:
               repository: example.com/\${helm.chartProjectName}
@@ -182,7 +182,7 @@ class TestProjects {
         resources:
           limits:
             cpu: 1
-		""".stripIndent()
+        """.stripIndent()
 		testProjectDir.newFile("differentSrc/test/helm/structtest.yaml") << """\
         title: "CPU requests should work"
         values:
@@ -194,20 +194,20 @@ class TestProjects {
             test: "eq"
             path: "[0]['spec']['template']['spec']['containers'][0]['resources']['requests']['cpu']"
             value: 1
-		""".stripIndent()
+        """.stripIndent()
 	}
 
 	static def createChartProjectWithTwoDifferentCharts(TemporaryFolder testProjectDir, File buildFile, String helmVersion) {
-		testProjectDir.newFolder("src", "main", "helm")
-		testProjectDir.newFolder("src", "test", "helm")
-		testProjectDir.newFolder("src", "main", "helm", "templates")
-		testProjectDir.newFolder("src", "main", "helm2")
-		testProjectDir.newFolder("src", "test", "helm2")
-		testProjectDir.newFolder("src", "main", "helm2", "templates")
-		testProjectDir.newFolder("build")
-		buildFile << """\
-			import com.kiwigrid.k8s.helm.tasks.HelmBuildTask
-			import com.kiwigrid.k8s.helm.tasks.HelmTestTask
+        testProjectDir.newFolder("src", "main", "helm")
+        testProjectDir.newFolder("src", "test", "helm")
+        testProjectDir.newFolder("src", "main", "helm", "templates")
+        testProjectDir.newFolder("src", "main", "helm2")
+        testProjectDir.newFolder("src", "test", "helm2")
+        testProjectDir.newFolder("src", "main", "helm2", "templates")
+        testProjectDir.newFolder("build")
+        buildFile << """\
+            import com.kiwigrid.k8s.helm.tasks.HelmBuildTask
+            import com.kiwigrid.k8s.helm.tasks.HelmTestTask
 
             helm {
                 version "${helmVersion}"
@@ -220,36 +220,36 @@ class TestProjects {
             }
             
             tasks.register("helmSecondChartBuild", HelmBuildTask.class) {
-			  dependsOn tasks.named("helmRepoSync")
-			  expansions = helm.expansions
-			  copyFrom helm
+              dependsOn tasks.named("helmRepoSync")
+              expansions = helm.expansions
+              copyFrom helm
 
-			  // custom configuration
-			  source = file('src/main/helm2')
-			  outputDirectory = file("\$buildDir/helm/repo2")
-			}
-			
-			tasks.register("helmSecondChartTest", HelmTestTask.class) {
-			  dependsOn tasks.named("helmSecondChartBuild")
-			  copyFrom helm
+              // custom configuration
+              source = file('src/main/helm2')
+              outputDirectory = file("\$buildDir/helm/repo2")
+            }
+            
+            tasks.register("helmSecondChartTest", HelmTestTask.class) {
+              dependsOn tasks.named("helmSecondChartBuild")
+              copyFrom helm
 
-			  // custom configuration
-			  tests = file('src/test/helm2')
-			  outputDirectory = file("\$buildDir/helm/repo2")
-			}
-        """.stripIndent()
+              // custom configuration
+              tests = file('src/test/helm2')
+              outputDirectory = file("\$buildDir/helm/repo2")
+            }
+            """.stripIndent()
 		testProjectDir.newFile("src/main/helm/Chart.yaml") << """\
             apiVersion: v1
             description: A simple good working helm chart 
             name: \${helm.chartProjectName}
             version: \${helm.chartVersion}
-        """.stripIndent()
+            """.stripIndent()
 		testProjectDir.newFile("src/main/helm2/Chart.yaml") << """\
             apiVersion: v1
             description: A simple good working helm chart 
             name: \${helm.chartProjectName}2
             version: \${helm.chartVersion}
-        """.stripIndent()
+            """.stripIndent()
 
 		testProjectDir.newFile("src/main/helm/templates/deployment.yaml") << """\
             kind: Deployment
@@ -263,7 +263,7 @@ class TestProjects {
                   containers:
                   - name: {{ .Release.Name }}mydeploymentpodcontainer
                     image: "test:test"
-        """.stripIndent()
+            """.stripIndent()
 		testProjectDir.newFile("src/main/helm2/templates/deployment.yaml") << """\
             kind: Deployment
             apiVersion: extensions/v1beta1
@@ -276,7 +276,7 @@ class TestProjects {
                   containers:
                   - name: {{ .Release.Name }}mydeploymentpodcontainer
                     image: "test:test"
-        """.stripIndent()
+            """.stripIndent()
 
 		testProjectDir.newFile("src/test/helm/structtest.yaml") << """\
         title: "Check name"
@@ -285,7 +285,7 @@ class TestProjects {
             test: "eq"
             path: "[0]['metadata']['name']"
             value: mydeployment
-		""".stripIndent()
+        """.stripIndent()
 		testProjectDir.newFile("src/test/helm2/structtest.yaml") << """\
         title: "Check name"
         assert:
@@ -293,6 +293,6 @@ class TestProjects {
             test: "eq"
             path: "[0]['metadata']['name']"
             value: mydeployment2
-		""".stripIndent()
+        """.stripIndent()
 	}
 }
