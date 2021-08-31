@@ -16,18 +16,14 @@ import com.jayway.jsonpath.JsonPath;
 import com.kiwigrid.k8s.helm.HelmPlugin;
 import javax.inject.Inject;
 import org.gradle.api.Action;
+import org.gradle.api.GradleException;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Provider;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputDirectory;
-import org.gradle.api.tasks.InputFiles;
-import org.gradle.api.tasks.OutputDirectory;
-import org.gradle.api.tasks.TaskAction;
-import org.gradle.api.tasks.VerificationTask;
+import org.gradle.api.tasks.*;
 import org.gradle.api.tasks.options.Option;
 import org.gradle.internal.exceptions.DefaultMultiCauseException;
 import org.gradle.language.base.plugins.LifecycleBasePlugin;
@@ -38,7 +34,6 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 	public static final String VALUES_OPTION = "--values";
 	public static final String FAILURE_END_TAG = "</failure>";
 	private DirectoryProperty tests;
-	private Property<String> chartName;
 
 	private final ConfigurableFileCollection charts;
 
@@ -57,7 +52,6 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 		tests = objectFactory.directoryProperty();
 		tests.convention(getProject().provider(this::getTestSourceDir));
 		charts = objectFactory.fileCollection();
-		chartName = objectFactory.property(String.class);
 	}
 
 	private Directory getTestSourceDir() {
@@ -66,9 +60,21 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 
 	@TaskAction
 	public void runTests() throws IOException {
-		File[] chartFolders = getOutputDirectory().listFiles(file -> file.isDirectory() && matchesChartName(file));
+		File[] chartFolders = getOutputDirectory().listFiles(File::isDirectory);
 		if (chartFolders == null || chartFolders.length == 0) {
 			return;
+		}
+		if (chartFolders.length > 1) {
+			String charts = Arrays
+					.stream(chartFolders)
+					.map(File::getName)
+					.map(s -> String.format("'%s'", s))
+					.collect(Collectors.joining(", "));
+			throw new GradleException(String.format(
+					"The output folder '%s' contains more than one helm chart.\n The list of folders with charts: %s",
+					getOutputDirectory().getAbsolutePath(),
+					charts
+			));
 		}
 		boolean lintWithValuesSupported = HelmPlugin.lintWithValuesSupported(getVersion());
 		if (!lintWithValuesSupported) {
@@ -93,32 +99,15 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 				.map(file -> fromYamlFile(commonTestPathPrefix, file))
 				.collect(Collectors.toList());
 		List<AssertionError> failures = new ArrayList<>();
-		File testJunitReportFile = new File(testOutputs,  getChartNamePath() + "helm-junit-report.xml");
-		getLogger().info("Writing junit xml to {}", testJunitReportFile.getAbsolutePath());
-		StringBuilder junitReport = new StringBuilder();
-		junitReport.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-		junitReport.append("<testsuites>");
-		Arrays.stream(chartFolders)
-				.forEach(chartFolder -> {
-					junitReport
-							.append("<testsuite name=\"")
-							.append(chartFolder.getName())
-							.append("\" tests=\"")
-							.append(testCases.size() + 1)
-							.append("\">");
-					runTestsForChart(lintWithValuesSupported,
-							templateWithOutputSupported,
-							chartFolder,
-							testCases,
-							failures,
-							junitReport);
-					junitReport.append("</testsuite>");
-				});
-		junitReport.append("</testsuites>");
-		try (PrintWriter writer = new PrintWriter(new FileWriter(testJunitReportFile))) {
-			writer.write(junitReport.toString());
-		}
-		getLogger().debug("Test results:\n{}", junitReport);
+		File chartFolder = chartFolders[0];
+
+		runTestsForChart(lintWithValuesSupported,
+				templateWithOutputSupported,
+				chartFolder,
+				testCases,
+				failures
+		);
+
 		if (!failures.isEmpty()) {
 			Logger logger = getLogger();
 			logger.error("There have been test failures.");
@@ -129,16 +118,21 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 		}
 	}
 
-	private boolean matchesChartName(File file) {
-		String name = chartName.getOrNull();
-		return name == null || name.equals(file.getName());
-	}
+	private void runTestsForChart(boolean lintWithValuesSupported, boolean templateWithOutputSupported, File chartFolder, List<HelmTestCase> testCases, List<AssertionError> failures) throws IOException {
+		File chartTestOutputFolder = new File(testOutputs, chartFolder.getName());
+		File testJunitReportFile = new File(chartTestOutputFolder, "helm-junit-report.xml");
+		getLogger().info("Writing junit xml to {}", testJunitReportFile.getAbsolutePath());
+		StringBuilder junitReport = new StringBuilder();
+		junitReport.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+		junitReport.append("<testsuites>");
 
-	private String getChartNamePath() {
-		return chartName.getOrNull() == null ? "" : chartName.getOrNull() + File.separator;
-	}
+		junitReport
+				.append("<testsuite name=\"")
+				.append(chartFolder.getName())
+				.append("\" tests=\"")
+				.append(testCases.size() + 1)
+				.append("\">");
 
-	private void runTestsForChart(boolean lintWithValuesSupported, boolean templateWithOutputSupported, File chartFolder, List<HelmTestCase> testCases, List<AssertionError> failures, StringBuilder junitReport) {
 		getLogger().info("Linting {} with default values...", chartFolder.getName());
 		junitReport.append("<testcase name=\"defaultValueLinting\" classname=\"HelmPlugin\">");
 		HelmPlugin.HelmExecResult lintExecResult = HelmPlugin.helmExec(getProject(),
@@ -153,7 +147,7 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 			failures.add(new AssertionError("Linting with default values failed"));
 		}
 		junitReport.append("</testcase>");
-		getProject().delete(new File(testOutputs, chartName.getOrElse("")));
+		getProject().delete(chartTestOutputFolder);
 		Pattern pattern = Pattern.compile(testPattern);
 		testCases
 				.stream()
@@ -181,6 +175,14 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 						chartTestOutputFolder,
 						junitReport,
 						failures));
+
+		junitReport.append("</testsuite>");
+		junitReport.append("</testsuites>");
+
+		try (PrintWriter writer = new PrintWriter(new FileWriter(testJunitReportFile))) {
+			writer.write(junitReport.toString());
+		}
+		getLogger().debug("Test results:\n{}", junitReport);
 	}
 
 	private void runSingleTestCase(HelmTestCase helmTestCase, boolean lintWithValuesSupported, boolean templateWithOutputSupported, File chartFolder, File chartTestOutputFolder, StringBuilder junitReport, List<AssertionError> failures) {
@@ -206,7 +208,7 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 			}
 			if (templateWithOutputSupported) {
 				getLogger().debug("Templating and asserting ...");
-				File testCaseOutputFolder = new File(testOutputs, getChartNamePath() + helmTestCase.name);
+				File testCaseOutputFolder = new File(chartTestOutputFolder, helmTestCase.name);
 				testCaseOutputFolder.mkdirs();
 				HelmPlugin.HelmExecResult helmExecResult = helmTemplate(chartFolder,
 						helmTestCase,
@@ -320,16 +322,6 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 	public HelmTestTask setTests(Provider<Directory> tests) {
 		this.tests.set(tests);
 		return this;
-	}
-
-	@Input
-	@org.gradle.api.tasks.Optional
-	public Property<String> getChartName() {
-		return chartName;
-	}
-
-	public void setChartName(String chartName) {
-		this.chartName.set(chartName);
 	}
 
 	@OutputDirectory
