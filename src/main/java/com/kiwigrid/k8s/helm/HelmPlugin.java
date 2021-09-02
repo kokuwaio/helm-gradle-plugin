@@ -1,12 +1,9 @@
 package com.kiwigrid.k8s.helm;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.util.Arrays;
-import java.util.Collections;
+import java.io.*;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import com.kiwigrid.k8s.helm.tasks.HelmBuildTask;
 import com.kiwigrid.k8s.helm.tasks.HelmDeployTask;
@@ -264,18 +261,18 @@ public class HelmPlugin implements Plugin<Project> {
 		return loadYamlSilently(yamlFile, false);
 	}
 
-	public static Iterable<Object> loadYamlsSilently(File yamlFile) {
+	public static List<Object> loadYamlsSilently(File yamlFile) {
 		return loadYamlsSilently(yamlFile, false);
 	}
 
 	public static Object loadYamlSilently(File yamlFile, boolean emptyObjectInsteadOfRuntimeExceptions) {
-		try {
-			return YAML.load(new FileInputStream(yamlFile));
-		} catch (FileNotFoundException e) {
+		try (InputStream inputStream = new FileInputStream(yamlFile)) {
+			return YAML.load(inputStream);
+		} catch (IOException e) {
 			if (emptyObjectInsteadOfRuntimeExceptions) {
 				return new Object();
 			}
-			throw new RuntimeException(e);
+			throw new UncheckedIOException(e);
 		} catch (YAMLException parsingError) {
 			if (emptyObjectInsteadOfRuntimeExceptions) {
 				return new Object();
@@ -284,17 +281,19 @@ public class HelmPlugin implements Plugin<Project> {
 		}
 	}
 
-	public static Iterable<Object> loadYamlsSilently(File yamlFile, boolean emptySetInsteadOfRuntimeExceptions) {
-		try {
-			return YAML.loadAll(new FileInputStream(yamlFile));
-		} catch (FileNotFoundException e) {
+	public static List<Object> loadYamlsSilently(File yamlFile, boolean emptySetInsteadOfRuntimeExceptions) {
+		try (FileInputStream yaml = new FileInputStream(yamlFile);) {
+			return StreamSupport.stream(YAML.loadAll(yaml).spliterator(), false)
+					.filter(Objects::nonNull)
+					.collect(Collectors.toList());
+		} catch (IOException e) {
 			if (emptySetInsteadOfRuntimeExceptions) {
-				return Collections.emptySet();
+				return Collections.emptyList();
 			}
-			throw new RuntimeException(e);
+			throw new UncheckedIOException(e);
 		} catch (YAMLException parsingError) {
 			if (emptySetInsteadOfRuntimeExceptions) {
-				return Collections.emptySet();
+				return Collections.emptyList();
 			}
 			throw parsingError;
 		}

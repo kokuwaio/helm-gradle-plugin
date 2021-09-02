@@ -84,10 +84,12 @@ public class HelmRepoSyncTask extends AbstractHelmTask {
 		Map<String, Object> repoMap;
 		Map repoYaml;
 		if (repoFile.exists()) {
-			repoYaml = HelmPlugin.YAML.loadAs(new FileInputStream(repoFile), Map.class);
-			List<Object> repos = (List<Object>) repoYaml.get("repositories");
-			repoMap = repos.stream()
-					.collect(Collectors.toMap(r -> (String) ((Map) r).get("name"), Function.identity()));
+			try (FileInputStream inputStream = new FileInputStream(repoFile)) {
+				repoYaml = HelmPlugin.YAML.loadAs(inputStream, Map.class);
+				List<Object> repos = (List<Object>) repoYaml.get("repositories");
+				repoMap = repos.stream()
+						.collect(Collectors.toMap(r -> (String) ((Map) r).get("name"), Function.identity()));
+			}
 		} else {
 			repoMap = Collections.emptyMap();
 			repoYaml = Collections.emptyMap();

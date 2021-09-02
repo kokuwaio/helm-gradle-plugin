@@ -80,11 +80,63 @@ class HelmPluginTest extends Specification {
 		result.task(":helmChartTest").outcome == SUCCESS
 		result.task(":helmDeploy").outcome == SUCCESS
 		new File(testProjectDir.root, "/build/helm/repo/${PROJECT_NAME}-1.0.0.tgz").exists()
-		new File(testProjectDir.root, "/build/helm/test/helm-junit-report.xml").exists()
+		new File(testProjectDir.root, "/build/helm/test/${PROJECT_NAME}/helm-junit-report.xml").exists()
 		def publications = wireMockRule.findAll(RequestPatternBuilder.newRequestPattern(RequestMethod.fromString(deployMethod), UrlPattern.ANY))
 		publications.size() == 1
 
 		where:
 		[helmVersion, deployMethod] << [["2.17.0", "3.0.0"], [ "PUT", "POST" ]].combinations()
+	}
+
+	def "simple chart can be build and tested with helm #helmVersion and source for charts and sources for tests are custom"() {
+		given:
+		TestProjects.createChartProjectWithCustomPaths(
+				testProjectDir,
+				buildFile,
+				helmVersion
+		)
+
+		when:
+		def result = GradleRunner.create()
+				.withProjectDir(testProjectDir.root)
+				.withPluginClasspath()
+				.withArguments(":helmChartBuild", ":helmChartTest", "--info", "--stacktrace")
+				.build()
+
+		then:
+		result.task(":helmChartBuild").outcome == SUCCESS
+		result.task(":helmChartTest").outcome == SUCCESS
+		new File(testProjectDir.root, "/build/helm/repo/${PROJECT_NAME}-1.0.0.tgz").exists()
+		new File(testProjectDir.root, "/build/helm/test/${PROJECT_NAME}/helm-junit-report.xml").exists()
+
+		where:
+		helmVersion << ["2.17.0", "3.0.0"]
+	}
+
+	def "two chart in one project can be build and tested with helm #helmVersion"() {
+		given:
+		TestProjects.createChartProjectWithTwoDifferentCharts(
+				testProjectDir,
+				buildFile,
+				helmVersion
+		)
+
+		when:
+		def result = GradleRunner.create()
+				.withProjectDir(testProjectDir.root)
+				.withPluginClasspath()
+				.withArguments(":helmChartTest", ":helmSecondChartTest", "--info", "--stacktrace")
+				.build()
+
+		then:
+		result.task(":helmChartBuild").outcome == SUCCESS
+		result.task(":helmChartTest").outcome == SUCCESS
+		new File(testProjectDir.root, "/build/helm/repo/${PROJECT_NAME}-1.0.0.tgz").exists()
+		new File(testProjectDir.root, "/build/helm/repo2/${PROJECT_NAME}2-1.0.0.tgz").exists()
+		new File(testProjectDir.root, "/build/helm/test/${PROJECT_NAME}/helm-junit-report.xml").exists()
+		new File(testProjectDir.root, "/build/helm/test/${PROJECT_NAME}2/helm-junit-report.xml").exists()
+
+		where:
+		helmVersion << ["2.17.0", "3.0.0"]
 	}
 }

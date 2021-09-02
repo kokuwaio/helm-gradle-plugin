@@ -97,14 +97,15 @@ public class HelmDeployTask extends AbstractHelmTask {
 	}
 
 	private static String getResponseMessage(HttpURLConnection connection) throws IOException {
-		InputStream errorStream = connection.getErrorStream();
-		if (errorStream != null) {
-			return "Code "
-					+ connection.getResponseCode()
-					+ " - "
-					+ IOUtils.toString(errorStream, StandardCharsets.UTF_8);
-		} else {
-			return "Code " + connection.getResponseCode();
+		try (InputStream errorStream = connection.getErrorStream()) {
+			if (errorStream != null) {
+				return "Code "
+						+ connection.getResponseCode()
+						+ " - "
+						+ IOUtils.toString(errorStream, StandardCharsets.UTF_8);
+			} else {
+				return "Code " + connection.getResponseCode();
+			}
 		}
 	}
 }

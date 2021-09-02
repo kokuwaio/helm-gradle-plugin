@@ -1,9 +1,6 @@
 package com.kiwigrid.k8s.helm.tasks;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -19,17 +16,14 @@ import com.jayway.jsonpath.JsonPath;
 import com.kiwigrid.k8s.helm.HelmPlugin;
 import javax.inject.Inject;
 import org.gradle.api.Action;
+import org.gradle.api.GradleException;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputDirectory;
-import org.gradle.api.tasks.InputFiles;
-import org.gradle.api.tasks.OutputDirectory;
-import org.gradle.api.tasks.TaskAction;
-import org.gradle.api.tasks.VerificationTask;
+import org.gradle.api.provider.Provider;
+import org.gradle.api.tasks.*;
 import org.gradle.api.tasks.options.Option;
 import org.gradle.internal.exceptions.DefaultMultiCauseException;
 import org.gradle.language.base.plugins.LifecycleBasePlugin;
@@ -39,7 +33,7 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 
 	public static final String VALUES_OPTION = "--values";
 	public static final String FAILURE_END_TAG = "</failure>";
-	private final DirectoryProperty tests;
+	private DirectoryProperty tests;
 
 	private final ConfigurableFileCollection charts;
 
@@ -53,7 +47,7 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 	public HelmTestTask(ObjectFactory objectFactory) {
 		setDescription("Tests Helm Chart via \"helm lint\" and assert definitions");
 		setGroup(LifecycleBasePlugin.VERIFICATION_GROUP);
-		onlyIf(element -> getTestSourceDir().getAsFile().exists());
+		onlyIf(element -> tests.getAsFile().get().exists());
 		testOutputs = new File(getProject().getBuildDir(), "helm/test");
 		tests = objectFactory.directoryProperty();
 		tests.convention(getProject().provider(this::getTestSourceDir));
@@ -69,6 +63,18 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 		File[] chartFolders = getOutputDirectory().listFiles(File::isDirectory);
 		if (chartFolders == null || chartFolders.length == 0) {
 			return;
+		}
+		if (chartFolders.length > 1) {
+			String charts = Arrays
+					.stream(chartFolders)
+					.map(File::getName)
+					.map(s -> String.format("'%s'", s))
+					.collect(Collectors.joining(", "));
+			throw new GradleException(String.format(
+					"The output folder '%s' contains more than one helm chart.\n The list of folders with charts: %s",
+					getOutputDirectory().getAbsolutePath(),
+					charts
+			));
 		}
 		boolean lintWithValuesSupported = HelmPlugin.lintWithValuesSupported(getVersion());
 		if (!lintWithValuesSupported) {
@@ -93,32 +99,15 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 				.map(file -> fromYamlFile(commonTestPathPrefix, file))
 				.collect(Collectors.toList());
 		List<AssertionError> failures = new ArrayList<>();
-		File testJunitReportFile = new File(testOutputs, "helm-junit-report.xml");
-		getLogger().info("Writing junit xml to {}", testJunitReportFile.getAbsolutePath());
-		StringBuilder junitReport = new StringBuilder();
-		junitReport.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-		junitReport.append("<testsuites>");
-		Arrays.stream(chartFolders)
-				.forEach(chartFolder -> {
-					junitReport
-							.append("<testsuite name=\"")
-							.append(chartFolder.getName())
-							.append("\" tests=\"")
-							.append(testCases.size() + 1)
-							.append("\">");
-					runTestsForChart(lintWithValuesSupported,
-							templateWithOutputSupported,
-							chartFolder,
-							testCases,
-							failures,
-							junitReport);
-					junitReport.append("</testsuite>");
-				});
-		junitReport.append("</testsuites>");
-		try (PrintWriter writer = new PrintWriter(new FileWriter(testJunitReportFile))) {
-			writer.write(junitReport.toString());
-		}
-		getLogger().debug("Test results:\n{}", junitReport);
+		File chartFolder = chartFolders[0];
+
+		runTestsForChart(lintWithValuesSupported,
+				templateWithOutputSupported,
+				chartFolder,
+				testCases,
+				failures
+		);
+
 		if (!failures.isEmpty()) {
 			Logger logger = getLogger();
 			logger.error("There have been test failures.");
@@ -129,7 +118,21 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 		}
 	}
 
-	private void runTestsForChart(boolean lintWithValuesSupported, boolean templateWithOutputSupported, File chartFolder, List<HelmTestCase> testCases, List<AssertionError> failures, StringBuilder junitReport) {
+	private void runTestsForChart(boolean lintWithValuesSupported, boolean templateWithOutputSupported, File chartFolder, List<HelmTestCase> testCases, List<AssertionError> failures) throws IOException {
+		File chartTestOutputFolder = new File(testOutputs, chartFolder.getName());
+		File testJunitReportFile = new File(chartTestOutputFolder, "helm-junit-report.xml");
+		getLogger().info("Writing junit xml to {}", testJunitReportFile.getAbsolutePath());
+		StringBuilder junitReport = new StringBuilder();
+		junitReport.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+		junitReport.append("<testsuites>");
+
+		junitReport
+				.append("<testsuite name=\"")
+				.append(chartFolder.getName())
+				.append("\" tests=\"")
+				.append(testCases.size() + 1)
+				.append("\">");
+
 		getLogger().info("Linting {} with default values...", chartFolder.getName());
 		junitReport.append("<testcase name=\"defaultValueLinting\" classname=\"HelmPlugin\">");
 		HelmPlugin.HelmExecResult lintExecResult = HelmPlugin.helmExec(getProject(),
@@ -144,7 +147,7 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 			failures.add(new AssertionError("Linting with default values failed"));
 		}
 		junitReport.append("</testcase>");
-		getProject().delete(testOutputs);
+		getProject().delete(chartTestOutputFolder);
 		Pattern pattern = Pattern.compile(testPattern);
 		testCases
 				.stream()
@@ -169,11 +172,20 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 						lintWithValuesSupported,
 						templateWithOutputSupported,
 						chartFolder,
+						chartTestOutputFolder,
 						junitReport,
 						failures));
+
+		junitReport.append("</testsuite>");
+		junitReport.append("</testsuites>");
+
+		try (PrintWriter writer = new PrintWriter(new FileWriter(testJunitReportFile))) {
+			writer.write(junitReport.toString());
+		}
+		getLogger().debug("Test results:\n{}", junitReport);
 	}
 
-	private void runSingleTestCase(HelmTestCase helmTestCase, boolean lintWithValuesSupported, boolean templateWithOutputSupported, File chartFolder, StringBuilder junitReport, List<AssertionError> failures) {
+	private void runSingleTestCase(HelmTestCase helmTestCase, boolean lintWithValuesSupported, boolean templateWithOutputSupported, File chartFolder, File chartTestOutputFolder, StringBuilder junitReport, List<AssertionError> failures) {
 		getLogger().info("Running test case {}: {}", helmTestCase.name, helmTestCase.title);
 		junitReport
 				.append("<testcase name=\"")
@@ -196,7 +208,7 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 			}
 			if (templateWithOutputSupported) {
 				getLogger().debug("Templating and asserting ...");
-				File testCaseOutputFolder = new File(testOutputs, helmTestCase.name);
+				File testCaseOutputFolder = new File(chartTestOutputFolder, helmTestCase.name);
 				testCaseOutputFolder.mkdirs();
 				HelmPlugin.HelmExecResult helmExecResult = helmTemplate(chartFolder,
 						helmTestCase,
@@ -297,6 +309,21 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 		return tests;
 	}
 
+	public HelmTestTask setTests(File tests) {
+		this.tests.set(tests);
+		return this;
+	}
+
+	public HelmTestTask setTests(Directory tests) {
+		this.tests.set(tests);
+		return this;
+	}
+
+	public HelmTestTask setTests(Provider<Directory> tests) {
+		this.tests.set(tests);
+		return this;
+	}
+
 	@OutputDirectory
 	public File getTestOutputs() {
 		return testOutputs;
@@ -351,7 +378,7 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 				try {
 					return testCaseFromMap(createTestName(commonPathPrefix, yaml), test);
 				} catch (IOException e) {
-					throw new RuntimeException(e);
+					throw new UncheckedIOException(e);
 				}
 			} else {
 				return fromFile(commonPathPrefix, yaml);
@@ -409,9 +436,7 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 		String path = (String) test.get("path");
 		Object expectedValue = test.get("value");
 		return new HelmTestAssertion(fileName, file -> {
-			List<Object> documents = StreamSupport.stream(HelmPlugin.loadYamlsSilently(file).spliterator(), false)
-					.filter(Objects::nonNull)
-					.collect(Collectors.toList());
+			List<Object> documents = HelmPlugin.loadYamlsSilently(file);
 			getLogger().debug("Loaded {}: {}", file, documents);
 			Object fragment = JsonPath.read(documents, path);
 			if (!Objects.equals(fragment, expectedValue)) {
@@ -431,9 +456,7 @@ public class HelmTestTask extends AbstractHelmTask implements VerificationTask {
 		String pattern = (String) test.get("pattern");
 		Pattern compiledPattern = Pattern.compile(pattern);
 		return new HelmTestAssertion(fileName, file -> {
-			List<Object> documents = StreamSupport.stream(HelmPlugin.loadYamlsSilently(file).spliterator(), false)
-					.filter(Objects::nonNull)
-					.collect(Collectors.toList());
+			List<Object> documents = HelmPlugin.loadYamlsSilently(file);
 			getLogger().debug("Loaded {}: {}", file, documents);
 			Object fragment = JsonPath.read(documents, path);
 			String fragmentString = HelmPlugin.YAML.dump(fragment);

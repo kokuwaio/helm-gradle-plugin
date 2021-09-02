@@ -95,6 +95,44 @@ helm {
     // this will upload the chart to the respective repo using the appropriate deploy spec
     deployTo repositories.myHelmRepoName
 }
+
+helmChartBuild() {
+    // source folder for the charts manifest files. just an example here, provide your own as needed
+    // defaults to file('/src/main/helm')
+    source = file(project.projectDir.getAbsolutePath() + '/helm') 
+}
+
+helmChartTest() {
+    // source folder for the tests files. just an example here, provide your own as needed
+    // defaults to file('/src/test/helm')
+    tests = file(project.projectDir.getAbsolutePath() + "/helm/test")
+}
+// Optional. You need to register new pair of tasks for each additional helm chart in your project
+// outputDirectory must be same in both tasks and differs from helm.outputDirectory
+tasks.register("helmSecondChartBuild", HelmBuildTask.class) {
+  dependsOn tasks.named("helmRepoSync")
+  expansions = helm.expansions
+  copyFrom helm
+  
+  // custom configuration
+  // source folder for the charts manifest files. just an example here, provide your own as needed
+  // defaults to file('/src/main/helm')
+  source = file('src/main/secondchart')
+  // output folder for the compiled charts manifest files. just an example here, provide your own as needed
+  outputDirectory = file("$buildDir/helm/repo2")
+}
+
+tasks.register("helmSecondChartTest", HelmBuildTask.class) {
+  dependsOn tasks.named("helmSecondChartBuild")
+  copyFrom helm
+  
+  // custom configuration
+  // source folder for the tests files. just an example here, provide your own as needed
+  tests = file('src/test/secondchart')
+  // output folder for the compiled charts manifest files. just an example here, provide your own as needed
+  // defaults to file('/src/test/helm')
+  outputDirectory = file("$buildDir/helm/repo2")
+}
 ```
 
 ### Author chart
