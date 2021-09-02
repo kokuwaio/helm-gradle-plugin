@@ -35,7 +35,7 @@ How
 
 1. Fork 
 2. Develop
-3. Issue a Pull-Request against `master`
+3. Issue a Pull-Request against `master`, the PR has to be labeled with one of `feature`, `enhancement`, `fix`, `bug`, `test`, `other` or `dependencies` to make it show up in automatic [release notes](.github/workflows/release-notes-config.json)
 
 Releasing
 ---
